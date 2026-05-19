@@ -12,7 +12,34 @@ This note records one concrete single-GPU serving run for `Qwen/Qwen2.5-72B-Inst
 - Test shape: short golden prompts, streaming responses, candidate-only load test
 - Context mode: `--max-model-len 1024`
 
-This is a short-context throughput configuration. It is not a long-context capacity result.
+The main throughput sweep is a short-context configuration. A separate 4096-context c1 run is included below to make the single-L20 70B claim concrete.
+
+## Minimum Experiment Matrix
+
+| Model | Quant | GPU | Context | Concurrency | Success Rate | p95 TTFT | tok/s | OOM |
+|---|---|---|---:|---:|---:|---:|---:|---|
+| Qwen2.5-72B-Instruct | Q4 AWQ / AWQ Marlin | L20 48GB (46GB usable) | 4096 | 1 | 100% (5/5) | 5.28s | 10.02 output tok/s | No |
+
+The 4096-context row used `--max-model-len 4096`, `--max-num-seqs 1`, `--max-num-batched-tokens 4096`, a 3,875-token prompt by tokenizer count, and `max_tokens=128`. vLLM reported:
+
+```text
+GPU KV cache size: 10,848 tokens
+Maximum concurrency for 4,096 tokens per request: 2.65x
+```
+
+The load-test summary was:
+
+```text
+successful requests: 5 / 5
+prompt tokens: 19,520 total
+output tokens: 170 total
+output token throughput: 10.02 tok/s
+p95 TTFT: 5.28s
+p95 latency: 7.29s
+p05 per-request decode speed: 16.89 tok/s
+errors: {}
+OOM: no CUDA OOM found in the vLLM log
+```
 
 ## Best Throughput Configuration
 

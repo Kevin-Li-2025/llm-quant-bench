@@ -19,6 +19,17 @@ Recommended positioning:
 - 24-72 hour soak tests.
 - Real single-GPU serving SLA validation.
 
+## Real L20 Experiment Snapshot
+
+These are measured runs for `Qwen/Qwen2.5-72B-Instruct-AWQ` on one NVIDIA L20. They are serving measurements, not quality-retention claims.
+
+| Model | Quant | GPU | Context | Concurrency | Success Rate | p95 TTFT | tok/s | OOM |
+|---|---|---|---:|---:|---:|---:|---:|---|
+| Qwen2.5-72B-Instruct | Q4 AWQ / AWQ Marlin | L20 48GB (46GB usable) | 4096 | 1 | 100% (5/5) | 5.28s | 10.02 output tok/s | No |
+| Qwen2.5-72B-Instruct | Q4 AWQ / AWQ Marlin | L20 48GB (46GB usable) | 1024 | 48 | 100% (2333/2333) | 0.24s | 488.63 output tok/s | No |
+
+The 4096-context row used a 3,875-token prompt and `max_tokens=128`. The 1024-context row is a short-context high-throughput configuration. See [docs/l20-qwen72b-awq-results.md](docs/l20-qwen72b-awq-results.md) for the full run notes.
+
 Recommended external benchmarks to add:
 
 - General capability: `lm-evaluation-harness`, for example MMLU/MMLU-Pro, GPQA, GSM8K/MATH, ARC, HellaSwag, and TruthfulQA.
