@@ -1,0 +1,43 @@
+{
+  "baseline": {
+    "name": "70b-fp16-baseline",
+    "base_url": "http://localhost:8000/v1",
+    "api_key": "EMPTY",
+    "model": "baseline-70b",
+    "temperature": 0,
+    "max_tokens": 512,
+    "timeout_s": 120
+  },
+  "candidate": {
+    "name": "l20-70b-q4",
+    "base_url": "http://localhost:8001/v1",
+    "api_key": "EMPTY",
+    "model": "quantized-70b",
+    "temperature": 0,
+    "max_tokens": 512,
+    "timeout_s": 120
+  },
+  "judge": {
+    "enabled": false,
+    "name": "judge",
+    "base_url": "http://localhost:8002/v1",
+    "api_key": "EMPTY",
+    "model": "judge-model",
+    "temperature": 0,
+    "max_tokens": 256,
+    "timeout_s": 120
+  },
+  "targets": {
+    "min_quality_retention": 0.98,
+    "min_success_rate": 0.995,
+    "max_weakly_scored_rate": 0.0,
+    "max_judge_inconsistency_rate": 0.05,
+    "max_judge_unvalidated_rate": 0.0,
+    "max_p95_ttft_s": 6.0,
+    "max_p95_inter_token_latency_s": 0.35,
+    "max_p95_time_per_output_token_s": 0.35,
+    "min_p05_tokens_per_second": 3.0,
+    "target_context_tokens": 8192,
+    "min_context_success_rate": 0.99
+  }
+}
