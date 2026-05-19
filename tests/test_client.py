@@ -10,10 +10,11 @@ class OpenAIMockHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         length = int(self.headers.get("Content-Length", "0"))
         body = json.loads(self.rfile.read(length))
-        if "stream_options" in body:
+        stream_options = body.get("stream_options") or {}
+        if "stream_options" in body and stream_options.get("include_usage") is not True:
             self.send_response(400)
             self.end_headers()
-            self.wfile.write(b"stream_options should not be sent by default")
+            self.wfile.write(b"unsupported stream_options")
             return
 
         if body.get("stream"):
@@ -22,6 +23,12 @@ class OpenAIMockHandler(BaseHTTPRequestHandler):
             self.end_headers()
             for token in ["hello", " ", "world"]:
                 event = {"choices": [{"delta": {"content": token}}]}
+                self.wfile.write(f"data: {json.dumps(event)}\n\n".encode("utf-8"))
+            if stream_options.get("include_usage"):
+                event = {
+                    "choices": [],
+                    "usage": {"prompt_tokens": 3, "completion_tokens": 2},
+                }
                 self.wfile.write(f"data: {json.dumps(event)}\n\n".encode("utf-8"))
             self.wfile.write(b"data: [DONE]\n\n")
             return
@@ -73,6 +80,22 @@ class ClientTest(unittest.TestCase):
         self.assertEqual(result.text, "hello world")
         self.assertGreater(result.output_tokens, 0)
         self.assertIsNotNone(result.ttft_s)
+        self.assertIsNone(result.prompt_tokens)
+
+    def test_streaming_generation_can_capture_usage(self):
+        client = OpenAIChatClient(
+            ModelConfig(
+                name="mock",
+                base_url=self.base_url,
+                model="mock-model",
+                stream_options={"include_usage": True},
+            )
+        )
+        result = client.generate("hi", stream=True)
+        self.assertTrue(result.ok)
+        self.assertEqual(result.text, "hello world")
+        self.assertEqual(result.prompt_tokens, 3)
+        self.assertEqual(result.output_tokens, 2)
 
 
 if __name__ == "__main__":

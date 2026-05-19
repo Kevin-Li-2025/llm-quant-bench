@@ -87,6 +87,18 @@ python3 -m llm_quant_bench run \
   --no-stream
 ```
 
+For OpenAI-compatible servers that support streaming usage metadata, add:
+
+```bash
+python3 -m llm_quant_bench run \
+  --config examples/config.example.json \
+  --dataset examples/golden_set.jsonl \
+  --out runs/l20-70b-q4 \
+  --stream-usage
+```
+
+This sends `stream_options.include_usage=true` so prompt and completion token counts can come from the server instead of tokenizer-free estimates.
+
 ## Candidate Load Test
 
 The `run` command requests both the baseline and candidate, so its throughput only describes the benchmark run itself. To measure candidate-only serving capacity, use `load`:
@@ -110,6 +122,8 @@ python3 -m llm_quant_bench load \
   --concurrency 4 \
   --duration-seconds 600
 ```
+
+If the endpoint supports OpenAI streaming usage events, add `--stream-usage` to collect prompt token totals during load tests.
 
 Outputs:
 

@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import argparse
 import json
+from dataclasses import replace
 from pathlib import Path
 
+from .client import ModelConfig
 from .metrics import perplexity_delta_percent, perplexity_from_token_logprobs
 from .demo import run_demo
 from .load import prompts_from_dataset, run_load_test
@@ -36,6 +38,11 @@ def main(argv: list[str] | None = None) -> int:
         help="Run full dataset waves until this many seconds elapse. Overrides repeats as the stop condition.",
     )
     run_parser.add_argument("--no-stream", action="store_true", help="Disable streaming TTFT measurement.")
+    run_parser.add_argument(
+        "--stream-usage",
+        action="store_true",
+        help="Request streaming usage metadata with stream_options.include_usage=true.",
+    )
 
     summary_parser = subparsers.add_parser("summarize", help="Summarize an existing results.jsonl.")
     summary_parser.add_argument("--results", required=True, type=Path)
@@ -58,10 +65,17 @@ def main(argv: list[str] | None = None) -> int:
     load_parser.add_argument("--requests", type=int)
     load_parser.add_argument("--duration-seconds", type=float)
     load_parser.add_argument("--no-stream", action="store_true")
+    load_parser.add_argument(
+        "--stream-usage",
+        action="store_true",
+        help="Request streaming usage metadata with stream_options.include_usage=true.",
+    )
 
     args = parser.parse_args(argv)
     if args.command == "run":
         config = BenchmarkConfig.from_path(args.config)
+        if args.stream_usage:
+            config = _with_stream_usage(config)
         dataset = load_dataset(args.dataset)
         summary = run_benchmark(
             config=config,
@@ -111,9 +125,14 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "load":
         config = BenchmarkConfig.from_path(args.config)
+        model = (
+            _with_stream_usage_model(config.candidate)
+            if args.stream_usage
+            else config.candidate
+        )
         dataset = load_dataset(args.dataset)
         summary = run_load_test(
-            model=config.candidate,
+            model=model,
             prompts=prompts_from_dataset(dataset),
             out_dir=args.out,
             concurrency=args.concurrency,
@@ -141,6 +160,21 @@ def _read_logprobs(path: Path) -> list[float]:
     if isinstance(data, dict) and isinstance(data.get("token_logprobs"), list):
         return [float(item) for item in data["token_logprobs"]]
     raise ValueError(f"{path} must be a JSON list or object with token_logprobs")
+
+
+def _with_stream_usage(config: BenchmarkConfig) -> BenchmarkConfig:
+    return BenchmarkConfig(
+        baseline=_with_stream_usage_model(config.baseline),
+        candidate=_with_stream_usage_model(config.candidate),
+        targets=config.targets,
+        judge=config.judge,
+    )
+
+
+def _with_stream_usage_model(model: ModelConfig) -> ModelConfig:
+    stream_options = dict(getattr(model, "stream_options") or {})
+    stream_options["include_usage"] = True
+    return replace(model, stream_options=stream_options)
 
 
 if __name__ == "__main__":
