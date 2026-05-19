@@ -43,9 +43,11 @@ This table is closer to external serving benchmarks: unique prompts, average ser
 | ~512 in / 256 out | 1 | 8 | 100% | 0.76s | 15.88s | 16.21 | 0.063 | 16.92 | No |
 | ~512 in / 256 out | 4 | 32 | 100% | 2.94s | 18.63s | 57.10 | 0.223 | 14.99 | No |
 | ~512 in / 256 out | 8 | 64 | 100% | 6.06s | 22.20s | 93.38 | 0.365 | 12.13 | No |
+| ~512 in / 256 out | 10 | 80 | 100% | 6.71s | 23.69s | 108.70 | 0.425 | 11.26 | No |
 | ~512 in / 256 out | 16 | 128 | 100% | 11.01s | 36.29s | 127.70 | 0.499 | 7.66 | No |
+| ~512 in / 256 out | 24 | 120 | 100% | 37.26s | 64.08s | 120.51 | 0.471 | 5.25 | No |
 
-This benchmark uses `max_tokens=256`, `min_tokens=256`, and `ignore_eos=true` to make output length comparable across concurrency levels.
+This benchmark uses `max_tokens=256`, `min_tokens=256`, and `ignore_eos=true` to make output length comparable across concurrency levels. The c10 row is the closest match to the GigaGPU 10-concurrent-user public table. The c24 run is included as a saturation check; it is slower than c16 and has much worse tail latency, so c16 is the best fixed-shape throughput point tested here.
 
 ## External Comparisons
 
@@ -54,6 +56,7 @@ These comparisons are directional. Serving benchmarks are sensitive to prompt le
 | Source | Hardware | Model / Quant | Shape | Reported Result | How to Read It |
 |---|---|---|---|---:|---|
 | This repo | 1x L20 48GB | Qwen2.5-72B AWQ Marlin | ~512 input / 256 output, c8 | 93.38 output tok/s | Fixed-shape aggregate throughput with 100% success. |
+| This repo | 1x L20 48GB | Qwen2.5-72B AWQ Marlin | ~512 input / 256 output, c10 | 108.70 output tok/s | Closest local match to 10-concurrent-user public tables. |
 | This repo | 1x L20 48GB | Qwen2.5-72B AWQ Marlin | ~512 input / 256 output, c16 | 127.70 output tok/s | Higher throughput, but p95 latency rises to 36.29s. |
 | [GigaGPU Apr 2026](https://gigagpu.com/tokens-sec-benchmark-update-april-2026/) | 1x RTX 3090 | Qwen 2.5 72B Q4 | 512 input / 256 output, 10 concurrent users | 32 tok/s | Similar fixed-shape benchmark, different GPU and quant/runtime details. |
 | [GigaGPU Apr 2026](https://gigagpu.com/tokens-sec-benchmark-update-april-2026/) | 1x RTX 5090 | Qwen 2.5 72B Q4 | 512 input / 256 output, 10 concurrent users | 58-82 tok/s | This L20 run is above the published 5090 range for that table. |
