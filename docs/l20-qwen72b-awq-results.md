@@ -113,6 +113,23 @@ This run is intended for fairer comparison with external serving benchmarks.
 
 The c16 fixed-shape run used 45.3 GB of the 46.1 GB visible VRAM during sampling, with about 97% GPU utilization. No CUDA OOM or request errors were observed in these runs.
 
+## External Comparisons
+
+These comparisons are directional because serving throughput depends on hardware, prompt length, output length, concurrency, batching, kernels, and sampling settings.
+
+| Source | Hardware | Model / Quant | Shape | Reported Result | Note |
+|---|---|---|---|---:|---|
+| This repo | 1x L20 48GB | Qwen2.5-72B AWQ Marlin | ~512 input / 256 output, c8 | 93.38 output tok/s | Fixed-shape aggregate throughput, 64/64 success. |
+| This repo | 1x L20 48GB | Qwen2.5-72B AWQ Marlin | ~512 input / 256 output, c16 | 127.70 output tok/s | Higher throughput, 128/128 success, p95 latency 36.29s. |
+| [GigaGPU Apr 2026](https://gigagpu.com/tokens-sec-benchmark-update-april-2026/) | 1x RTX 3090 | Qwen 2.5 72B Q4 | 512 input / 256 output, 10 concurrent users | 32 tok/s | Similar fixed-shape public table. |
+| [GigaGPU Apr 2026](https://gigagpu.com/tokens-sec-benchmark-update-april-2026/) | 1x RTX 5090 | Qwen 2.5 72B Q4 | 512 input / 256 output, 10 concurrent users | 58-82 tok/s | This L20 run is above that published 5090 range. |
+| [GigaGPU Apr 2026](https://gigagpu.com/tokens-sec-benchmark-update-april-2026/) | 1x RTX 6000 Pro | Qwen 2.5 72B Q4 | 512 input / 256 output, 10 concurrent users | 45 tok/s | Different GPU and runtime details. |
+| [Qwen official speed benchmark](https://qwen.readthedocs.io/en/v2.5/benchmark/speed_benchmark.html) | 1x A100 80GB | Qwen2.5-72B AWQ, Transformers | input 1 / 6144 / 14336, 2048 output, batch size 1 | 11.50 / 8.17 / 5.57 tok/s | Useful single-request reference, not aggregate serving throughput. |
+| [Qwen official speed benchmark](https://qwen.readthedocs.io/en/v2.5/benchmark/speed_benchmark.html) | 2x A100 80GB | Qwen2.5-72B AWQ, vLLM | input 1 / 6144 / 14336 / 30720, 2048 output, batch size 1 | 44.30 / 40.67 / 36.63 / 30.02 tok/s | Official vLLM baseline uses 2 A100s and batch size 1. |
+| [NVIDIA NIM supported models](https://docs.nvidia.com/nim/large-language-models/1.14.0/supported-models.html) | L20 | Qwen2.5 72B Instruct FP8 | Optimized profiles | 4 or 8 GPUs | NVIDIA's optimized L20 profile is multi-GPU; this run demonstrates a single-L20 AWQ path. |
+
+Bottom line: the fixed-shape c8/c16 numbers are strong versus public single-GPU Q4 tables, but they should be described as aggregate serving throughput, not single-request speed. The long-context c1 rows are capacity and stability evidence. None of these results prove lossless quality retention.
+
 ## Load Test Command
 
 ```bash

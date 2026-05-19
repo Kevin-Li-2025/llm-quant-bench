@@ -47,6 +47,23 @@ This table is closer to external serving benchmarks: unique prompts, average ser
 
 This benchmark uses `max_tokens=256`, `min_tokens=256`, and `ignore_eos=true` to make output length comparable across concurrency levels.
 
+## External Comparisons
+
+These comparisons are directional. Serving benchmarks are sensitive to prompt length, output length, concurrency, batching policy, quantization kernel, sampling settings, and whether the number is per-request decode speed or aggregate server throughput.
+
+| Source | Hardware | Model / Quant | Shape | Reported Result | How to Read It |
+|---|---|---|---|---:|---|
+| This repo | 1x L20 48GB | Qwen2.5-72B AWQ Marlin | ~512 input / 256 output, c8 | 93.38 output tok/s | Fixed-shape aggregate throughput with 100% success. |
+| This repo | 1x L20 48GB | Qwen2.5-72B AWQ Marlin | ~512 input / 256 output, c16 | 127.70 output tok/s | Higher throughput, but p95 latency rises to 36.29s. |
+| [GigaGPU Apr 2026](https://gigagpu.com/tokens-sec-benchmark-update-april-2026/) | 1x RTX 3090 | Qwen 2.5 72B Q4 | 512 input / 256 output, 10 concurrent users | 32 tok/s | Similar fixed-shape benchmark, different GPU and quant/runtime details. |
+| [GigaGPU Apr 2026](https://gigagpu.com/tokens-sec-benchmark-update-april-2026/) | 1x RTX 5090 | Qwen 2.5 72B Q4 | 512 input / 256 output, 10 concurrent users | 58-82 tok/s | This L20 run is above the published 5090 range for that table. |
+| [GigaGPU Apr 2026](https://gigagpu.com/tokens-sec-benchmark-update-april-2026/) | 1x RTX 6000 Pro | Qwen 2.5 72B Q4 | 512 input / 256 output, 10 concurrent users | 45 tok/s | Same caveat: useful directional comparison, not identical kernel/config. |
+| [Qwen official speed benchmark](https://qwen.readthedocs.io/en/v2.5/benchmark/speed_benchmark.html) | 1x A100 80GB | Qwen2.5-72B AWQ, Transformers | input 1 / 6144 / 14336, 2048 output, batch size 1 | 11.50 / 8.17 / 5.57 tok/s | Useful for single-request long-context sanity checks, not aggregate serving throughput. |
+| [Qwen official speed benchmark](https://qwen.readthedocs.io/en/v2.5/benchmark/speed_benchmark.html) | 2x A100 80GB | Qwen2.5-72B AWQ, vLLM | input 1 / 6144 / 14336 / 30720, 2048 output, batch size 1 | 44.30 / 40.67 / 36.63 / 30.02 tok/s | Official vLLM baseline uses 2 A100s and batch size 1, so it should not be compared directly with c16 aggregate throughput. |
+| [NVIDIA NIM supported models](https://docs.nvidia.com/nim/large-language-models/1.14.0/supported-models.html) | L20 | Qwen2.5 72B Instruct FP8 | Optimized profiles | 4 or 8 GPUs | NVIDIA's optimized L20 profiles are multi-GPU; this repo demonstrates a single-L20 AWQ path outside that conservative profile. |
+
+The practical interpretation is that single-L20 Qwen2.5-72B AWQ serving is feasible and measurable. The fixed-shape c8/c16 results are strong versus public single-GPU Q4 serving tables, while the long-context c1 rows are mainly capacity and stability evidence. These numbers are not quality-retention evidence and should not be described as lossless.
+
 Recommended external benchmarks to add:
 
 - General capability: `lm-evaluation-harness`, for example MMLU/MMLU-Pro, GPQA, GSM8K/MATH, ARC, HellaSwag, and TruthfulQA.
