@@ -12,13 +12,18 @@ This note records one concrete single-GPU serving run for `Qwen/Qwen2.5-72B-Inst
 - Test shape: short golden prompts, streaming responses, candidate-only load test
 - Context mode: `--max-model-len 1024`
 
-The main throughput sweep is a short-context configuration. A separate 4096-context c1 run is included below to make the single-L20 70B claim concrete.
+The main throughput sweep is a short-context configuration. Separate 4096-context and 8192-context c1 runs are included below to make the single-L20 70B claim concrete.
 
-## Minimum Experiment Matrix
+## Experiment Matrix
 
 | Model | Quant | GPU | Context | Concurrency | Success Rate | p95 TTFT | tok/s | OOM |
 |---|---|---|---:|---:|---:|---:|---:|---|
+| Qwen2.5-72B-Instruct | Q4 AWQ / AWQ Marlin | L20 48GB (46GB usable) | 8192 | 1 | 100% (3/3) | 11.03s | 6.16 output tok/s | No |
 | Qwen2.5-72B-Instruct | Q4 AWQ / AWQ Marlin | L20 48GB (46GB usable) | 4096 | 1 | 100% (5/5) | 5.28s | 10.02 output tok/s | No |
+| Qwen2.5-72B-Instruct | Q4 AWQ / AWQ Marlin | L20 48GB (46GB usable) | 1024 | 16 | 100% (1177/1177) | 0.14s | 245.91 output tok/s | No |
+| Qwen2.5-72B-Instruct | Q4 AWQ / AWQ Marlin | L20 48GB (46GB usable) | 1024 | 32 | 100% (408/408) | 2.17s | 390.08 output tok/s | No |
+| Qwen2.5-72B-Instruct | Q4 AWQ / AWQ Marlin | L20 48GB (46GB usable) | 1024 | 48 | 100% (2333/2333) | 0.24s | 488.63 output tok/s | No |
+| Qwen2.5-72B-Instruct | Q4 AWQ / AWQ Marlin | L20 48GB (46GB usable) | 1024 | 64 | 100% (461/461) | 3.39s | 432.63 output tok/s | No |
 
 The 4096-context row used `--max-model-len 4096`, `--max-num-seqs 1`, `--max-num-batched-tokens 4096`, a 3,875-token prompt by tokenizer count, and `max_tokens=128`. vLLM reported:
 
@@ -37,6 +42,27 @@ output token throughput: 10.02 tok/s
 p95 TTFT: 5.28s
 p95 latency: 7.29s
 p05 per-request decode speed: 16.89 tok/s
+errors: {}
+OOM: no CUDA OOM found in the vLLM log
+```
+
+The 8192-context row used `--max-model-len 8192`, `--max-num-seqs 1`, `--max-num-batched-tokens 2048`, a 7,514-token prompt by tokenizer count, and `max_tokens=128`. vLLM reported:
+
+```text
+GPU KV cache size: 12,320 tokens
+Maximum concurrency for 8,192 tokens per request: 1.50x
+```
+
+The load-test summary was:
+
+```text
+successful requests: 3 / 3
+prompt tokens: 22,629 total
+output tokens: 123 total
+output token throughput: 6.16 tok/s
+p95 TTFT: 11.03s
+p95 latency: 13.54s
+p05 per-request decode speed: 16.36 tok/s
 errors: {}
 OOM: no CUDA OOM found in the vLLM log
 ```
