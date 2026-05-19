@@ -34,6 +34,19 @@ These are measured runs for `Qwen/Qwen2.5-72B-Instruct-AWQ` on one NVIDIA L20. T
 
 The 8192-context row used a 7,514-token prompt. The 4096-context row used a 3,875-token prompt. The 1024-context rows are short-context throughput sweeps; `c48` was the best tested throughput point, while `c64` was past the useful concurrency peak. See [docs/l20-qwen72b-awq-results.md](docs/l20-qwen72b-awq-results.md) for the full run notes.
 
+## Fixed-Shape Serving Benchmark
+
+This table is closer to external serving benchmarks: unique prompts, average server-side prompt length of 527 tokens, fixed 256 output tokens, streaming usage enabled, and no request failures.
+
+| Shape | Concurrency | Requests | Success Rate | p95 TTFT | p95 Latency | Output tok/s | Req/s | p05 Decode tok/s | OOM |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| ~512 in / 256 out | 1 | 8 | 100% | 0.76s | 15.88s | 16.21 | 0.063 | 16.92 | No |
+| ~512 in / 256 out | 4 | 32 | 100% | 2.94s | 18.63s | 57.10 | 0.223 | 14.99 | No |
+| ~512 in / 256 out | 8 | 64 | 100% | 6.06s | 22.20s | 93.38 | 0.365 | 12.13 | No |
+| ~512 in / 256 out | 16 | 128 | 100% | 11.01s | 36.29s | 127.70 | 0.499 | 7.66 | No |
+
+This benchmark uses `max_tokens=256`, `min_tokens=256`, and `ignore_eos=true` to make output length comparable across concurrency levels.
+
 Recommended external benchmarks to add:
 
 - General capability: `lm-evaluation-harness`, for example MMLU/MMLU-Pro, GPQA, GSM8K/MATH, ARC, HellaSwag, and TruthfulQA.

@@ -92,6 +92,27 @@ GPU KV cache size: 10,848 tokens
 Maximum concurrency for 1,024 tokens per request: 10.59x
 ```
 
+## Fixed-Shape 512x256 Benchmark
+
+This run is intended for fairer comparison with external serving benchmarks.
+
+- Prompt set: 128 unique prompts
+- Raw tokenizer prompt length: 498 tokens
+- Server-side prompt usage after chat formatting: 527 tokens on average
+- Output length: fixed 256 tokens
+- Sampling controls: `max_tokens=256`, `min_tokens=256`, `ignore_eos=true`, `temperature=0`
+- Endpoint mode: streaming with `stream_options.include_usage=true`
+- Serving config: the same 1024-context `awq_marlin` service listed above
+
+| Shape | Concurrency | Requests | Success Rate | p95 TTFT | p95 Latency | Output tok/s | Req/s | p05 Decode tok/s | OOM |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| ~512 in / 256 out | 1 | 8 | 100% | 0.76s | 15.88s | 16.21 | 0.063 | 16.92 | No |
+| ~512 in / 256 out | 4 | 32 | 100% | 2.94s | 18.63s | 57.10 | 0.223 | 14.99 | No |
+| ~512 in / 256 out | 8 | 64 | 100% | 6.06s | 22.20s | 93.38 | 0.365 | 12.13 | No |
+| ~512 in / 256 out | 16 | 128 | 100% | 11.01s | 36.29s | 127.70 | 0.499 | 7.66 | No |
+
+The c16 fixed-shape run used 45.3 GB of the 46.1 GB visible VRAM during sampling, with about 97% GPU utilization. No CUDA OOM or request errors were observed in these runs.
+
 ## Load Test Command
 
 ```bash
