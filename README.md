@@ -67,6 +67,10 @@ These comparisons are directional. Serving benchmarks are sensitive to prompt le
 
 The practical interpretation is that single-L20 Qwen2.5-72B AWQ serving is feasible and measurable. The fixed-shape c8/c16 results are strong versus public single-GPU Q4 serving tables, while the long-context c1 rows are mainly capacity and stability evidence. These numbers are not quality-retention evidence and should not be described as lossless.
 
+## Research Follow-Up
+
+A 24h fixed-shape c10 soak test is running with GPU power logging. The follow-up plan for quality retention, energy, additional 70B models, additional runtimes, and AWQ/GPTQ/FP8 ablations is tracked in [docs/research-experiment-plan.md](docs/research-experiment-plan.md).
+
 Recommended external benchmarks to add:
 
 - General capability: `lm-evaluation-harness`, for example MMLU/MMLU-Pro, GPQA, GSM8K/MATH, ARC, HellaSwag, and TruthfulQA.
