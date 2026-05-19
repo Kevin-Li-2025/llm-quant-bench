@@ -133,6 +133,8 @@ Outputs:
 
 This command only load-tests an already running candidate endpoint. It does not load, quantize, or optimize the 70B model. For real 70B serving on an L20, first serve the quantized model with vLLM, llama.cpp, TGI, TensorRT-LLM, or another inference stack.
 
+For one concrete single-L20 Qwen2.5-72B AWQ run, see [docs/l20-qwen72b-awq-results.md](docs/l20-qwen72b-awq-results.md).
+
 Run a long soak test:
 
 ```bash
