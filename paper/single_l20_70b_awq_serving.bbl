@@ -1,0 +1,86 @@
+\begin{thebibliography}{10}
+
+\bibitem{longbench}
+Yushi Bai, Xin Lv, Jiajie Zhang, Hongchang Lyu, Jiankai Tang, Zhidian Huang,
+  Zhengxiao Du, Xiao Liu, Aohan Zeng, Lei Hou, Yuxiao Dong, Jie Tang, and
+  Juanzi Li.
+\newblock Longbench: A bilingual, multitask benchmark for long context
+  understanding.
+\newblock {\em arXiv preprint arXiv:2308.14508}, 2023.
+
+\bibitem{marlin}
+Elias Frantar, Saleh Ashkboos, Torsten Hoefler, and Dan Alistarh.
+\newblock Marlin: Mixed-precision auto-regressive parallel inference on large
+  language models.
+\newblock {\em arXiv preprint arXiv:2408.11743}, 2024.
+
+\bibitem{gigagpu_2026}
+{GigaGPU}.
+\newblock Tokens/sec benchmark update, april 2026.
+\newblock \url{https://gigagpu.com/tokens-sec-benchmark-update-april-2026/},
+  2026.
+\newblock Accessed 2026-05-20.
+
+\bibitem{vllm_pagedattention}
+Woosuk Kwon, Zhuohan Li, Siyuan Zhuang, Ying Sheng, Lianmin Zheng, Cody~Hao Yu,
+  Joseph~E. Gonzalez, Hao Zhang, and Ion Stoica.
+\newblock Efficient memory management for large language model serving with
+  pagedattention.
+\newblock {\em Proceedings of the ACM SIGOPS 29th Symposium on Operating
+  Systems Principles}, 2023.
+
+\bibitem{awq}
+Ji~Lin, Jiaming Tang, Haotian Tang, Shang Yang, Xingyu Chen, and Song Han.
+\newblock Awq: Activation-aware weight quantization for llm compression and
+  acceleration.
+\newblock {\em Proceedings of Machine Learning and Systems}, 2024.
+
+\bibitem{genai_perf_docs}
+{NVIDIA}.
+\newblock Nvidia genai-perf: Metrics and benchmarking documentation.
+\newblock
+  \url{https://docs.nvidia.com/deeplearning/triton-inference-server/archives/triton-inference-server-2500/user-guide/docs/perf_analyzer/genai-perf/README.html},
+  2025.
+\newblock Accessed 2026-05-20.
+
+\bibitem{nvidia_nim_supported}
+{NVIDIA}.
+\newblock Nvidia nim for large language models: Supported models.
+\newblock
+  \url{https://docs.nvidia.com/nim/large-language-models/1.14.0/supported-models.html},
+  2026.
+\newblock Accessed 2026-05-20.
+
+\bibitem{qwen25_model_card}
+{Qwen Team}.
+\newblock Qwen2.5-72b-instruct model card.
+\newblock \url{https://huggingface.co/Qwen/Qwen2.5-72B-Instruct}, 2024.
+\newblock Accessed 2026-05-20.
+
+\bibitem{qwen25_speed_benchmark}
+{Qwen Team}.
+\newblock Qwen2.5 speed benchmark.
+\newblock
+  \url{https://qwen.readthedocs.io/en/v2.5/benchmark/speed_benchmark.html},
+  2024.
+\newblock Accessed 2026-05-20.
+
+\bibitem{qwen25_report}
+Qwen Team.
+\newblock Qwen2.5 technical report.
+\newblock {\em arXiv preprint arXiv:2412.15115}, 2024.
+
+\bibitem{vllm_bench_serve}
+{vLLM Project}.
+\newblock vllm serving benchmark documentation.
+\newblock \url{https://docs.vllm.ai/en/latest/cli/bench/serve.html}, 2026.
+\newblock Accessed 2026-05-20.
+
+\bibitem{mt_bench_arena}
+Lianmin Zheng, Wei-Lin Chiang, Ying Sheng, Siyuan Zhuang, Zhanghao Wu, Yonghao
+  Zhuang, Zi~Lin, Zhuohan Li, Dacheng Li, Eric~P. Xing, Hao Zhang, Joseph~E.
+  Gonzalez, and Ion Stoica.
+\newblock Judging llm-as-a-judge with mt-bench and chatbot arena.
+\newblock {\em Advances in Neural Information Processing Systems}, 2023.
+
+\end{thebibliography}

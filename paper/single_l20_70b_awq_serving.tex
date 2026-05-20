@@ -7,6 +7,7 @@
 \usepackage{enumitem}
 \usepackage{xcolor}
 \usepackage{array}
+\usepackage{longtable}
 
 \hypersetup{
   colorlinks=true,
@@ -16,80 +17,227 @@
 }
 
 \emergencystretch=2em
+\setlist[itemize]{leftmargin=1.5em}
 
-\title{Can a Single NVIDIA L20 Sustain a 70B-Class LLM?\\
-An Empirical Study of Qwen2.5-72B AWQ Marlin Serving}
+\title{Sustained 70B AWQ Inference on a Single NVIDIA L20:\\
+Throughput, Stability, Energy, and Quality Characterization}
 
 \author{
-Kevin Li \\
-\texttt{Kevin-Li-2025/llm-quant-bench}
+Yin Li\\
+\texttt{https://github.com/Kevin-Li-2025/llm-quant-bench}
 }
 
-\date{Draft: May 20, 2026}
+\date{Technical Report Draft: May 20, 2026}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-Serving 70B-class open-weight language models is commonly associated with 80GB accelerators or multi-GPU inference, yet many practical deployments are constrained to smaller 48GB-class GPUs. This report evaluates whether a single NVIDIA L20 can sustain a 70B-class quantized model under a fixed production-style serving workload. We serve Qwen2.5-72B-Instruct-AWQ using vLLM 0.8.5.post1 with AWQ Marlin on one L20 GPU and measure throughput, latency, reliability, and GPU-board energy over both short sweeps and a 24-hour soak. Under a fixed workload of approximately 512 input tokens, 256 output tokens, and concurrency 10, the system completed 36,740 out of 36,740 requests over 86,412.6 seconds, sustaining 108.84 output tokens/s with p95 time-to-first-token (TTFT) of 6.61s, p95 end-to-end latency of 23.54s, no request failures, and no CUDA OOM/error signatures in the vLLM log. GPU power sampled every 10 seconds yielded an estimated 330.15W average board power, 7.92 kWh GPU-board energy, 0.330 output tokens/J, and 1.008 total tokens/J.
+Serving 70B-class open-weight language models is usually associated with
+80GB accelerators, tensor-parallel multi-GPU systems, or vendor-managed
+inference profiles. This report asks a narrower systems question: can a single
+NVIDIA L20 48GB GPU sustain a useful 70B-class quantized serving workload, and
+what are the throughput, latency, stability, energy, and quality boundaries of
+that configuration? We evaluate Qwen2.5-72B-Instruct-AWQ served with vLLM
+0.8.5.post1 and AWQ Marlin on one L20. Under a fixed workload of approximately
+512 input tokens and 256 output tokens, a 24-hour concurrency-10 soak completed
+36,740/36,740 requests with no request failures and no vLLM CUDA OOM, traceback,
+or killed-process signatures. The system sustained 108.84 output tokens/s, with
+p95 time-to-first-token (TTFT) of 6.61s and p95 end-to-end latency of 23.54s.
+GPU-board power sampled through \texttt{nvidia-smi} produced an estimated
+7.92 kWh over the run, corresponding to 0.330 output tokens/J and 1.008 total
+tokens/J. Repeated fixed-shape runs at concurrency 1, 4, 8, and 16 completed
+12/12 runs successfully; the concurrency-16 condition averaged
+127.22 $\pm$ 12.68 output tokens/s over three runs, matching the earlier
+single-run screening result of 127.70 output tokens/s. The same AWQ endpoint
+also produced absolute quality scores of 0.8130 on MMLU, 0.8309 on CMMLU, and
+0.8082 on GSM8K, plus 80/80 MT-Bench answer generations and a 60-item 8K
+LongBench subset.
 
-The result should be interpreted narrowly: it is strong evidence that a single L20 can sustain one carefully configured Qwen2.5-72B AWQ serving workload, not evidence of lossless quality retention, long-context high-concurrency behavior, or general production SLA coverage. Relative to the closest public 512-input/256-output/10-concurrent Qwen 2.5 72B Q4 table we found, this L20 run is competitive with and above the published single-GPU figures, while NVIDIA's optimized NIM profiles for Qwen2.5 72B on L20 are multi-GPU FP8 configurations. We conclude that single-L20 70B-class AWQ serving is feasible and measurable, and that the next necessary step is quality-retention evaluation against a high-quality FP16/BF16 or trusted external baseline.
+The evidence supports a specific claim: a carefully configured single L20 can
+serve Qwen2.5-72B-Instruct-AWQ as a throughput-oriented 70B endpoint under the
+tested fixed-shape workload. It does not prove lossless AWQ quality retention,
+low-latency interactive serving, broad production SLA coverage, or equivalence
+to a BF16/FP16 baseline. BF16/FP16 baseline retention and MT-Bench judge scoring
+remain blocked until external or multi-GPU baseline and judge endpoints are
+available.
 \end{abstract}
+
+\section{Executive Summary}
+
+The central result is operational: a single NVIDIA L20 can repeatedly and
+stably serve a 70B-class AWQ model when the serving profile is designed around
+short-context, throughput-oriented batching. Table~\ref{tab:headline} gives the
+headline measurements.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.38\linewidth}
+                >{\raggedright\arraybackslash}p{0.50\linewidth}}
+\toprule
+Measurement & Result \\
+\midrule
+Model & Qwen2.5-72B-Instruct-AWQ \\
+Runtime & vLLM 0.8.5.post1, AWQ Marlin \\
+GPU & 1x NVIDIA L20, 46GB visible VRAM \\
+Fixed-shape workload & approx. 512 input / 256 output tokens \\
+24h soak success & 36,740/36,740 requests \\
+24h soak throughput & 108.84 output tokens/s \\
+24h soak p95 TTFT / latency & 6.61s / 23.54s \\
+24h GPU-board energy & 7.92 kWh \\
+24h output tokens/J & 0.330 \\
+Repeated c16 throughput & 127.22 $\pm$ 12.68 output tokens/s \\
+Repeated c16 p95 TTFT / latency & 11.91s $\pm$ 0.15s / 34.95s $\pm$ 1.00s \\
+Repeated run success & 12/12 runs, 100\% success \\
+Quality, absolute AWQ & MMLU 0.8130, CMMLU 0.8309, GSM8K 0.8082 \\
+Long-context subset & 60/60 LongBench 8K subset requests completed \\
+Explicit non-claim & No BF16/FP16 retention or MT-Bench judge score yet \\
+\bottomrule
+\end{tabular}
+\caption{Headline results. Confidence intervals are two-sided 95\% intervals over
+three repeated run-level summaries using Student $t$ critical values.}
+\label{tab:headline}
+\end{table}
+
+This report should be read as an empirical systems characterization, not as a
+new quantization algorithm paper. The contribution is the measurement package:
+serving configuration, fixed-shape throughput, repeated-run variance, 24-hour
+stability, GPU-board energy, absolute quality checks, and explicit blockers for
+stronger quality-retention claims.
+
+\section{Scope and Non-Claims}
+
+The supported claim is:
+
+\begin{quote}
+A single NVIDIA L20 can sustain Qwen2.5-72B-Instruct-AWQ serving under a fixed
+approximately 512 input / 256 output token workload, with 24-hour stability at
+concurrency 10 and repeated short-run throughput near 127 output tokens/s at
+concurrency 16.
+\end{quote}
+
+The following claims are not supported by the current evidence:
+
+\begin{itemize}
+  \item AWQ is lossless relative to BF16/FP16.
+  \item The configuration is a low-latency chat endpoint.
+  \item The result generalizes to all 70B models, all prompts, or all
+        quantization formats.
+  \item The 8K LongBench subset is an official LongBench leaderboard result.
+  \item MT-Bench has a judge score.
+  \item Single-L20 AWQ generally replaces multi-GPU BF16/FP16 inference.
+\end{itemize}
+
+The non-claims are important. A technical report is only useful if the
+boundaries are as concrete as the positive result.
 
 \section{Introduction}
 
-Large open-weight language models in the 70B-parameter class occupy a useful point in the model landscape: they are substantially stronger than many 7B--14B systems, can be self-hosted, and are small enough to be realistic for organizations that cannot deploy frontier-scale clusters. The operational difficulty is that these models are usually discussed in the context of 80GB GPUs or multi-GPU servers. A 48GB GPU has enough memory for 4-bit weights, but whether it can sustain useful serving behavior over time depends on more than static model fit. KV-cache allocation, batching policy, quantization kernels, prompt/output shape, request concurrency, and thermal or memory-fragmentation effects all determine whether the result is an engineering demo or a repeatable service.
+The practical value of 70B-class open-weight language models is clear: they are
+strong enough for many enterprise and research workloads while remaining
+self-hostable. The deployment difficulty is that most 70B serving discussions
+assume 80GB GPUs, multi-GPU tensor parallelism, or vendor-optimized inference
+profiles. Many organizations, however, have access to smaller datacenter
+accelerators such as the NVIDIA L20. A 48GB-class GPU can hold 4-bit 70B weights,
+but static model fit does not imply sustained serving capacity. KV-cache
+allocation, prompt shape, output length, batching policy, quantization kernels,
+thermal behavior, and tail latency determine whether the system is useful.
 
-This report studies a concrete question:
+This report studies one concrete question:
 
 \begin{quote}
-Can one NVIDIA L20 sustain a 70B-class quantized LLM under a fixed, externally comparable serving workload for 24 hours?
+What can one NVIDIA L20 actually sustain when serving a 70B-class AWQ model
+under fixed, reproducible workloads?
 \end{quote}
 
-We answer this question empirically for Qwen2.5-72B-Instruct-AWQ, served through vLLM with the AWQ Marlin kernel. We focus on sustained serving behavior rather than model quality. The model family itself is already well documented: Qwen2.5-72B-Instruct is a 72.7B-parameter instruction-tuned model with grouped-query attention and long-context support, and the Qwen team publishes both model cards and speed benchmarks for several runtimes and quantization modes \cite{qwen25_model_card,qwen25_speed_benchmark,qwen25_report}. The contribution of this report is not a new model or quantization method. The contribution is a transparent, reproducible measurement of a constrained single-GPU deployment point that is often discussed informally but rarely documented with day-long stability and energy numbers.
+The answer is empirical. We do not propose a new model, quantization method, or
+serving algorithm. Instead, we characterize a constrained deployment point that
+is often discussed informally but rarely reported with day-long stability,
+confidence intervals, energy estimates, and quality checks.
 
 \paragraph{Contributions.}
 
-\begin{itemize}[leftmargin=1.5em]
-  \item We report a 24-hour fixed-shape serving soak of Qwen2.5-72B-Instruct-AWQ on a single NVIDIA L20, including success rate, TTFT, end-to-end latency, output throughput, request throughput, GPU-board energy, and OOM/error checks.
-  \item We provide the exact serving configuration, workload shape, sampling controls, energy formula, and measurement scope.
-  \item We compare the result against public Qwen 2.5 72B/Q4 serving numbers, Qwen official speed benchmarks, and NVIDIA NIM hardware profile guidance, while explicitly separating comparable aggregate-throughput data from non-comparable single-request speed tables.
-  \item We identify the limits of the claim and the experiments required before making quality-retention or production-SLA claims.
+\begin{itemize}
+  \item We report a 24-hour concurrency-10 fixed-shape soak of
+        Qwen2.5-72B-Instruct-AWQ on one NVIDIA L20, including success rate,
+        TTFT, latency, output throughput, request throughput, GPU-board energy,
+        and log-based OOM/error checks.
+  \item We repeat the fixed-shape workload at concurrency 1, 4, 8, and 16 with
+        three runs per condition, reporting run-level means and 95\% confidence
+        intervals.
+  \item We report absolute AWQ quality measurements on MMLU, CMMLU, GSM8K,
+        MT-Bench answer generation, and an 8K LongBench subset
+        \cite{mt_bench_arena,longbench}.
+  \item We compare the measured operating point against public Qwen 2.5 72B Q4
+        serving numbers, Qwen official speed benchmarks, and NVIDIA NIM
+        supported-profile guidance.
+  \item We document the exact blockers for BF16/FP16 baseline retention,
+        MT-Bench judge scoring, runtime ablation, and quantization ablation.
 \end{itemize}
 
 \section{Background}
 
 \subsection{Why 70B on 48GB Is Nontrivial}
 
-Weight-only 4-bit quantization can reduce a 70B-class model's weight footprint enough to fit inside a 48GB GPU. Static fit, however, does not imply sustained serving capacity. During autoregressive decoding, memory is also consumed by KV cache, runtime buffers, scheduler state, CUDA graphs or eager-mode buffers, and fragmentation. The available KV-cache budget depends on the selected context length, maximum sequence count, and batching policy. A service that fits one request at a short context length may fail at longer context, and a service that survives a short benchmark can still degrade under a day-long stream of requests.
+Weight-only 4-bit quantization can reduce the weight footprint of a 70B-class
+model enough to fit in a 48GB GPU. Serving still requires more than weights:
+KV cache, runtime buffers, scheduling state, tokenization overhead, and memory
+fragmentation all consume capacity. Increasing context length or concurrency can
+push the same model from stable to OOM. Therefore, ``runs on one L20'' is not a
+single claim. It can mean a one-request smoke test, an interactive endpoint, a
+high-throughput fixed-shape service, or a long-running production workload. This
+report focuses on the latter two under explicitly bounded shapes.
 
-This distinction matters for user-facing claims. ``Runs on a single L20'' can mean a one-request smoke test, a low-throughput interactive endpoint, a high-throughput batched endpoint, or a stable day-long service. These are different claims. This report targets the third and fourth meanings under a fixed 512/256 serving shape.
+\subsection{vLLM, Continuous Batching, and AWQ Marlin}
 
-\subsection{vLLM, Continuous Batching, and PagedAttention}
+vLLM is a high-throughput LLM serving engine built around efficient KV-cache
+management and continuous batching. The PagedAttention work reports large
+throughput gains from better memory management during LLM serving
+\cite{vllm_pagedattention}. AWQ is a post-training weight-only quantization
+method that protects salient channels identified through activation statistics
+\cite{awq}. Marlin is an optimized mixed-precision FP16-by-INT4 inference kernel
+for autoregressive LLM inference \cite{marlin}. The measured system uses vLLM's
+AWQ Marlin path, \texttt{awq\_marlin}. This matters because a 4-bit checkpoint
+without an optimized serving kernel is a different deployment configuration.
 
-vLLM is a high-throughput serving engine built around efficient KV-cache management and continuous batching. Its PagedAttention paper reports 2--4$\times$ throughput improvements over prior serving systems under comparable latency conditions \cite{vllm_pagedattention}. NVIDIA GenAI-Perf and vLLM serving benchmarks both emphasize the same core serving metrics: output token throughput, request throughput, TTFT, inter-token latency, and end-to-end request latency \cite{genai_perf_docs,vllm_bench_serve}. We follow this metric vocabulary.
+\subsection{Serving Metrics}
 
-Continuous batching is central to interpreting our result. The per-request decode speed in the 24-hour run is only about 11--15 tokens/s, but the aggregate service produces 108.84 output tokens/s because multiple requests are decoded concurrently. Therefore, this result should not be described as a single-user decode speed. It is aggregate server throughput at concurrency 10.
-
-\subsection{AWQ and Marlin}
-
-Activation-aware Weight Quantization (AWQ) is a post-training weight-only quantization approach that protects salient channels identified through activation statistics, enabling 4-bit deployment while preserving much of the model behavior \cite{awq}. Marlin is a mixed-precision FP16$\times$INT4 inference kernel designed to recover close to the ideal speedup of 4-bit weight compression over useful batch sizes; the Marlin paper reports that integration with vLLM can improve end-to-end inference speed \cite{marlin}. Our evaluated stack uses vLLM's AWQ Marlin path (\texttt{awq\_marlin}), which is important because a generic 4-bit model file and an optimized 4-bit serving kernel are not equivalent deployment configurations.
+We follow the serving metric vocabulary used by vLLM and NVIDIA GenAI-Perf:
+time-to-first-token (TTFT), end-to-end request latency, inter-token latency
+(ITL), time per output token (TPOT), request throughput, and output token
+throughput \cite{vllm_bench_serve,genai_perf_docs}. In a continuously batched
+system, aggregate server output tokens/s can be much higher than per-request
+decode speed. This is central to the result: the 24-hour concurrency-10 run
+produces 108.84 aggregate output tokens/s while individual request decode speed
+is roughly 11--15 tokens/s.
 
 \section{Experimental Setup}
 
 \subsection{Hardware and Software}
 
-The test machine exposed one NVIDIA L20 GPU with approximately 46.1GB visible VRAM through `nvidia-smi'. The model weights were stored locally on the remote host. The serving environment used:
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+Component & Configuration \\
+\midrule
+GPU & 1x NVIDIA L20 \\
+Visible GPU memory & 46,068 MiB reported by \texttt{nvidia-smi} \\
+Model & Qwen/Qwen2.5-72B-Instruct-AWQ \\
+Runtime & vLLM 0.8.5.post1 \\
+Quantization path & AWQ Marlin \\
+Serving API & OpenAI-compatible \texttt{/v1/chat/completions} \\
+Primary context profile & \texttt{max\_model\_len=1024} \\
+Power sampling & \texttt{nvidia-smi}, approximately every 10 seconds \\
+\bottomrule
+\end{tabular}
+\caption{Primary test configuration.}
+\label{tab:setup}
+\end{table}
 
-\begin{itemize}[leftmargin=1.5em]
-  \item Model: Qwen/Qwen2.5-72B-Instruct-AWQ.
-  \item Runtime: vLLM 0.8.5.post1.
-  \item Quantization path: AWQ Marlin (\texttt{\detokenize{--quantization awq_marlin}}).
-  \item Serving API: OpenAI-compatible \texttt{/v1/chat/completions}.
-  \item PyTorch/CUDA stack: PyTorch 2.6.0 + CUDA 12.4 runtime in the vLLM environment.
-\end{itemize}
-
-The primary service configuration was:
+The primary service command was:
 
 \begin{verbatim}
 vllm serve /home/hhai/models/Qwen2.5-72B-Instruct-AWQ \
@@ -107,50 +255,57 @@ vllm serve /home/hhai/models/Qwen2.5-72B-Instruct-AWQ \
   --trust-remote-code
 \end{verbatim}
 
-The short-context configuration intentionally caps \texttt{max\_model\_len} at 1024. This is not a long-context service profile; it is a high-throughput fixed-shape profile. Separate 4096- and 8192-context single-concurrency validation runs are reported in Section~\ref{sec:long_context}.
+This is a short-context throughput profile. Separate 4096- and 8192-context
+single-concurrency checks were run, but the main throughput claim is for the
+1024-context service profile.
 
 \subsection{Workload}
 
-The externally comparable fixed-shape benchmark used:
+The fixed-shape benchmark was designed to be close to public serving tables:
 
-\begin{itemize}[leftmargin=1.5em]
-  \item Prompt set: 128 unique prompts.
-  \item Raw tokenizer prompt length: 498 tokens.
-  \item Server-side prompt usage after chat formatting: approximately 527 tokens on average.
-  \item Output control: \texttt{max\_tokens=256}, \texttt{min\_tokens=256}, \texttt{ignore\_eos=true}.
-  \item Sampling: \texttt{temperature=0}.
-  \item Streaming: enabled, with \texttt{stream\_options.include\_usage=true} to collect prompt and completion token counts from server-side usage metadata.
+\begin{itemize}
+  \item 128 unique prompts.
+  \item 498 raw tokenizer prompt tokens.
+  \item Approximately 527 server-side prompt tokens after chat formatting.
+  \item Fixed output length of 256 tokens.
+  \item \texttt{max\_tokens=256}, \texttt{min\_tokens=256},
+        \texttt{ignore\_eos=true}, \texttt{temperature=0}.
+  \item Streaming responses with \texttt{stream\_options.include\_usage=true}.
 \end{itemize}
 
-The 24-hour soak reused this fixed-shape workload at concurrency 10. This shape was selected because it aligns closely with the public GigaGPU 2026 benchmark methodology, which reports 512-token prompts, 256-token generations, and 10 concurrent users for Qwen 2.5 72B Q4 on several GPUs \cite{gigagpu_2026}.
+The 24-hour soak reused the same workload at concurrency 10. Repeated short runs
+used concurrency 1, 4, 8, and 16 with three repeats per condition.
 
-\subsection{Metrics}
+\subsection{Energy and Confidence Intervals}
 
-We use standard serving metrics:
-
-\begin{align}
-\mathrm{success\_rate} &= \frac{N_\mathrm{successful}}{N_\mathrm{total}}, \\
-\mathrm{output\_tok/s} &= \frac{\sum_i \mathrm{output\_tokens}_i}{T_\mathrm{benchmark}}, \\
-\mathrm{req/s} &= \frac{N_\mathrm{completed}}{T_\mathrm{benchmark}}.
-\end{align}
-
-TTFT is the time from request submission to the first streamed token. End-to-end latency is the time from request submission to final response. Inter-token latency (ITL) and time per output token (TPOT) describe the decode phase after the first token. These definitions are consistent with NVIDIA GenAI-Perf's metric descriptions and vLLM's serving benchmark output \cite{genai_perf_docs,vllm_bench_serve}.
-
-Energy is computed from `nvidia-smi' GPU board-power samples:
+GPU-board energy is computed from sampled board power:
 
 \begin{align}
-E_\mathrm{J} &= \int P(t) \, dt, \\
+E_\mathrm{J} &= \int P(t)\,dt, \\
 \mathrm{output\_tok/J} &= \frac{\sum_i \mathrm{output\_tokens}_i}{E_\mathrm{J}}, \\
-\mathrm{total\_tok/J} &= \frac{\sum_i (\mathrm{prompt\_tokens}_i + \mathrm{output\_tokens}_i)}{E_\mathrm{J}}.
+\mathrm{total\_tok/J} &=
+  \frac{\sum_i(\mathrm{prompt\_tokens}_i+\mathrm{output\_tokens}_i)}{E_\mathrm{J}}.
 \end{align}
 
-The implementation uses trapezoidal integration over the sampled power trace. Power was sampled approximately every 10 seconds. These are GPU-board energy estimates, not full-system wall-power measurements; CPU, DRAM, storage, power-supply losses, and cooling overhead are not included.
+The implementation uses trapezoidal integration over the power trace. These are
+GPU-board energy estimates, not wall-power measurements.
 
-\section{Results}
+Repeated-run confidence intervals use run-level summaries:
 
-\subsection{Fixed-Shape Concurrency Sweep}
+\begin{align}
+\bar{x} &= \frac{1}{n}\sum_{i=1}^{n}x_i, \\
+\mathrm{CI}_{95} &= \bar{x} \pm t_{0.975,n-1}\frac{s}{\sqrt{n}}.
+\end{align}
 
-Table~\ref{tab:fixed_shape_sweep} shows the short fixed-shape sweep. Throughput increases from concurrency 1 to concurrency 16, while tail latency rises. Concurrency 24 is a saturation point: throughput falls below the concurrency-16 result and p95 latency increases sharply. This is consistent with the expected throughput-latency tradeoff in batched LLM serving.
+For the reported repeated runs, $n=3$ per concurrency.
+
+\section{Serving Results}
+
+\subsection{Fixed-Shape Screening Sweep}
+
+Table~\ref{tab:fixed_shape_sweep} shows the initial fixed-shape concurrency
+sweep. Throughput improves through concurrency 16 and then regresses at
+concurrency 24, where tail latency also increases sharply.
 
 \begin{table}[h]
 \centering
@@ -167,15 +322,47 @@ Concurrency & Requests & Success & p95 TTFT & p95 Lat. & Out tok/s & Req/s & p05
 24 & 120 & 100\% & 37.26s & 64.08s & 120.51 & 0.471 & 5.25 \\
 \bottomrule
 \end{tabular}
-\caption{Fixed-shape sweep for approximately 512 input tokens and 256 output tokens. The concurrency-16 run produced the highest short-run throughput, while concurrency 24 saturated and regressed.}
+\caption{Initial fixed-shape sweep, approximately 512 input tokens and 256 output
+tokens. Concurrency 16 is the highest-throughput screened point; concurrency 24
+is beyond the useful peak for this profile.}
 \label{tab:fixed_shape_sweep}
 \end{table}
 
-The operational interpretation is not that concurrency 16 is always preferable. It is preferable only if the service can tolerate p95 end-to-end latency around 36s for this workload. For a more balanced throughput-latency point, concurrency 10 is more defensible and maps to the public 10-concurrent benchmark shape used for comparison.
+\subsection{Repeated Fixed-Shape Runs}
 
-\subsection{24-Hour Soak}
+The c1/c4/c8/c16 conditions were repeated three times each. Table~\ref{tab:ci}
+reports run-level means and two-sided 95\% confidence intervals.
 
-Table~\ref{tab:soak} reports the 24-hour run. The benchmark duration was 86,412.60 seconds. The load process completed normally and wrote \texttt{load\_summary.json}. Both stdout/stderr logs were inspected, and the vLLM service log was searched for CUDA OOM, OutOfMemory, Traceback, ERROR, and Killed signatures; none were found for the run.
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{rrrrrrr}
+\toprule
+Conc. & Runs & Success & Out tok/s & Req/s & p95 TTFT & p95 Lat. \\
+\midrule
+1  & 3 & 100\% $\pm$ 0.00\% & 16.57 $\pm$ 1.21  & 0.065 $\pm$ 0.005 & 0.54s $\pm$ 1.90s  & 15.66s $\pm$ 1.94s \\
+4  & 3 & 100\% $\pm$ 0.00\% & 55.75 $\pm$ 3.54  & 0.218 $\pm$ 0.014 & 3.01s $\pm$ 0.17s  & 18.70s $\pm$ 0.16s \\
+8  & 3 & 100\% $\pm$ 0.00\% & 93.26 $\pm$ 0.23  & 0.364 $\pm$ 0.001 & 6.05s $\pm$ 0.06s  & 22.16s $\pm$ 0.05s \\
+16 & 3 & 100\% $\pm$ 0.00\% & 127.22 $\pm$ 12.68 & 0.497 $\pm$ 0.050 & 11.91s $\pm$ 0.15s & 34.95s $\pm$ 1.00s \\
+\bottomrule
+\end{tabular}
+\caption{Repeated fixed-shape runs. All twelve runs completed successfully with
+no vLLM OOM/error signatures.}
+\label{tab:ci}
+\end{table}
+
+The repeated concurrency-16 mean, 127.22 output tokens/s, matches the earlier
+single-run result of 127.70 output tokens/s. The concurrency-8 result is
+especially tight at 93.26 $\pm$ 0.23 output tokens/s. The concurrency-16
+throughput interval is wider because two runs produced roughly 130 output
+tokens/s and one run produced 121.32 output tokens/s. Tail latency remains the
+main cost of the high-throughput profile.
+
+\subsection{Twenty-Four-Hour Soak}
+
+Table~\ref{tab:soak} reports the 24-hour concurrency-10 soak. The run completed
+normally, and log inspection found zero CUDA OOM, OutOfMemory, Traceback, ERROR,
+or Killed signatures.
 
 \begin{table}[h]
 \centering
@@ -185,7 +372,7 @@ Table~\ref{tab:soak} reports the 24-hour run. The benchmark duration was 86,412.
 Metric & Value \\
 \midrule
 Duration & 86,412.60s \\
-Requests & 36,740 \\
+Total requests & 36,740 \\
 Successful requests & 36,740 \\
 Failed requests & 0 \\
 Success rate & 100\% \\
@@ -194,27 +381,24 @@ Output tokens & 9,405,440 \\
 Total tokens & 28,767,420 \\
 Output throughput & 108.84 output tok/s \\
 Request throughput & 0.425 req/s \\
-p50 TTFT & 6.55s \\
 p95 TTFT & 6.61s \\
-p99 TTFT & 6.62s \\
-p50 latency & 23.52s \\
 p95 latency & 23.54s \\
-p99 latency & 23.55s \\
 p05 per-request decode speed & 11.26 tok/s \\
-p50 per-request decode speed & 15.08 tok/s \\
-p95 per-request decode speed & 15.14 tok/s \\
-CUDA OOM/error signatures & 0 \\
+OOM/error signatures & 0 \\
 \bottomrule
 \end{tabular}
-\caption{Twenty-four-hour fixed-shape soak at concurrency 10. The short concurrency-10 screening run measured 108.70 output tok/s; the 24-hour run sustained 108.84 output tok/s, indicating no measurable throughput decay under this workload.}
+\caption{Twenty-four-hour fixed-shape soak at concurrency 10. The 24-hour
+throughput, 108.84 output tokens/s, matches the short concurrency-10 screening
+result of 108.70 output tokens/s.}
 \label{tab:soak}
 \end{table}
 
-Two observations are important. First, the 24-hour throughput matches the short concurrency-10 screening run: 108.84 output tok/s over 24 hours versus 108.70 output tok/s in the short run. This suggests no obvious thermal, memory-fragmentation, or scheduler degradation under the tested workload. Second, the p95 TTFT and p95 latency are stable but not low. This configuration is best understood as a throughput-oriented service profile, not a low-latency chat profile.
+The agreement between the short screening run and the day-long run is one of the
+strongest results in the report. A short result can be a transient peak; a
+24-hour run at the same throughput with zero failures is evidence of sustained
+stability under this exact workload.
 
-\subsection{Energy}
-
-Table~\ref{tab:energy} summarizes GPU-board energy. The average power, 330.15W, is higher than some public nominal L20 TDP listings, but it is the observed board-power value reported by \texttt{nvidia-smi} under our workload. We report it directly rather than normalizing to a spec-sheet power value.
+\subsection{GPU-Board Energy}
 
 \begin{table}[h]
 \centering
@@ -232,20 +416,87 @@ Output tokens/J & 0.330 \\
 Total tokens/J & 1.008 \\
 Joules/output token & 3.033 \\
 Joules/total token & 0.992 \\
-Output tokens/kWh & 1,186,870 \\
-Total tokens/kWh & 3,630,153 \\
 \bottomrule
 \end{tabular}
-\caption{GPU-board energy estimate from 10-second `nvidia-smi' power samples. This is not wall-power energy.}
+\caption{GPU-board energy estimate from \texttt{nvidia-smi} power samples. This
+is not a full-system wall-power measurement.}
 \label{tab:energy}
 \end{table}
 
-The energy result is useful for regression testing and deployment planning, but should not be used as a complete data-center energy estimate. Full-system wall power can be materially higher depending on CPU, memory, fans, power supply, and cooling.
+The energy result is useful for regression testing and rough deployment
+planning. It should not be used as a full data-center energy estimate because
+CPU, memory, fans, power-supply losses, and cooling are outside the measurement
+scope.
 
-\subsection{Long-Context Capacity Checks}
+\section{Quality Characterization}
+
+This report does not yet include BF16/FP16-vs-AWQ retention. It does include
+absolute quality measurements from the AWQ candidate. These are useful for
+detecting severe quality collapse and for documenting the measured candidate,
+but they do not prove that AWQ is lossless.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+Evaluation & Context & Items & OK & Failed & Score \\
+\midrule
+MMLU & 1024 & 14,042 & 14,039 & 3 & 0.8130 \\
+CMMLU & 1024 & 11,582 & 11,582 & 0 & 0.8309 \\
+GSM8K & 1024 & 1,319 & 1,319 & 0 & 0.8082 \\
+MT-Bench generation & 1024 & 80 & 80 & 0 & pending judge \\
+LongBench subset, token-F1 & 8192 & 60 & 60 & 0 & 0.2038 \\
+LongBench v1 task metrics & 8192 & 60 & 60 & 0 & 16.16\% \\
+\bottomrule
+\end{tabular}
+\caption{Absolute AWQ candidate quality measurements. MT-Bench currently reports
+answer generation only, not a judge score. LongBench is a 60-item 8K subset, not
+an official leaderboard run.}
+\label{tab:quality}
+\end{table}
+
+The three MMLU failures were context-limit validation failures from prompts that
+exceeded the 1024-token short-context service profile, not CUDA OOMs. The
+LongBench v1 task-metric postprocess scored the 60 generated samples with
+task-specific metrics: 38.67\% on \texttt{multifieldqa\_en}, 30.53\% on
+\texttt{hotpotqa}, 12.90\% on \texttt{multi\_news}, 12.08\% on
+\texttt{gov\_report}, 2.76\% on \texttt{lcc}, and 0.00\% on
+\texttt{passage\_count}. These numbers are stricter than the earlier
+single-token-F1 summary, but they remain a subset result.
+
+\subsection{Blocked Retention and Judge Results}
+
+We ran a preflight for the two missing quality claims. Table~\ref{tab:blockers}
+summarizes the result.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lll}
+\toprule
+Item & Status & Missing prerequisites \\
+\midrule
+BF16/FP16 baseline retention & Blocked &
+\texttt{BASELINE\_BASE\_URL}, \texttt{BASELINE\_MODEL} \\
+MT-Bench judge score & Blocked &
+\texttt{JUDGE\_BASE\_URL}, \texttt{JUDGE\_MODEL}, \texttt{JUDGE\_API\_KEY} \\
+\bottomrule
+\end{tabular}
+\caption{Quality-retention and MT-Bench judge blockers as of the latest
+preflight.}
+\label{tab:blockers}
+\end{table}
+
+The remote host currently stages only AWQ checkpoint directories under
+\texttt{/home/hhai/models}. A local 72B BF16/FP16 baseline is not feasible on
+one L20: 72B BF16/FP16 weights require roughly 144GB before KV cache and runtime
+overhead, while the host exposes about 46GB of GPU memory and about 63GB of
+free disk. We also intentionally avoid judging MT-Bench with the AWQ candidate
+itself, because self-judging would not be a valid MT-Bench judge score.
+
+\section{Long-Context Capacity Checks}
 \label{sec:long_context}
-
-We also ran single-concurrency capacity checks at longer contexts. These are not the same workload as the fixed-shape throughput run, but they make the single-L20 70B claim more concrete.
 
 \begin{table}[h]
 \centering
@@ -258,15 +509,22 @@ Context & Prompt tokens & Concurrency & Success & p95 TTFT & Out tok/s & OOM \\
 8192 & 7,514 & 1 & 3/3 & 11.03s & 6.16 & No \\
 \bottomrule
 \end{tabular}
-\caption{Single-concurrency long-context validation runs. These are capacity checks, not high-throughput long-context service results.}
+\caption{Single-concurrency long-context capacity checks. These are not
+high-throughput long-context serving results.}
 \label{tab:long_context}
 \end{table}
 
-The service can handle 4K and 8K-class prompts at concurrency 1 without OOM in these tests, but the measured throughput is much lower than the 1024-context fixed-shape serving profile. A credible high-concurrency 8K or 16K claim would require a separate service configuration and a separate soak.
+The 4K and 8K checks show that the model can handle longer prompts at
+concurrency 1 without OOM. They do not justify a high-concurrency long-context
+claim. Long-context throughput requires a separate service profile, workload
+matrix, and soak.
 
 \section{External Positioning}
 
-Table~\ref{tab:external} compares our result to the closest public numbers found during the literature and web search. These comparisons are directional. Serving throughput is sensitive to model variant, quantization format, kernel, scheduler, prompt length, output length, concurrency, sampling settings, and measurement method.
+Table~\ref{tab:external} compares the result with public numbers. These
+comparisons are directional because serving throughput depends on model variant,
+quantization format, kernel, scheduler, prompt length, output length,
+concurrency, sampling settings, and measurement method.
 
 \begin{table}[h]
 \centering
@@ -275,106 +533,140 @@ Table~\ref{tab:external} compares our result to the closest public numbers found
 \begin{tabular}{>{\raggedright\arraybackslash}p{0.14\linewidth}
                 >{\raggedright\arraybackslash}p{0.13\linewidth}
                 >{\raggedright\arraybackslash}p{0.25\linewidth}
-                >{\raggedright\arraybackslash}p{0.24\linewidth}
+                >{\raggedright\arraybackslash}p{0.25\linewidth}
                 r}
 \toprule
 Source & Hardware & Model / Quant & Shape & Result \\
 \midrule
 This work & 1x L20 48GB & Qwen2.5-72B AWQ Marlin & 512/256, c10, 24h & 108.84 \\
+This work & 1x L20 48GB & Qwen2.5-72B AWQ Marlin & 512/256, c16, repeated & 127.22 $\pm$ 12.68 \\
 GigaGPU Apr. 2026 & 1x RTX 3090 & Qwen 2.5 72B Q4 & 512/256, c10 & 32 \\
 GigaGPU Apr. 2026 & 1x RTX 5090 & Qwen 2.5 72B Q4 & 512/256, c10 & 58--82 \\
 GigaGPU Apr. 2026 & 1x RTX 6000 Pro & Qwen 2.5 72B Q4 & 512/256, c10 & 45 \\
 Qwen official & 1x A100 80GB & Qwen2.5-72B AWQ, Transformers & input 1, output 2048, batch 1 & 11.50 \\
-Qwen official & 1x A100 80GB & Qwen2.5-72B AWQ, Transformers & input 6144, output 2048, batch 1 & 8.17 \\
-Qwen official & 1x A100 80GB & Qwen2.5-72B AWQ, Transformers & input 14336, output 2048, batch 1 & 5.57 \\
 Qwen official & 2x A100 80GB & Qwen2.5-72B AWQ, vLLM & input 1, output 2048, batch 1 & 44.30 \\
-Qwen official & 2x A100 80GB & Qwen2.5-72B AWQ, vLLM & input 6144, output 2048, batch 1 & 40.67 \\
-Qwen official & 2x A100 80GB & Qwen2.5-72B AWQ, vLLM & input 14336, output 2048, batch 1 & 36.63 \\
 Qwen official & 2x A100 80GB & Qwen2.5-72B AWQ, vLLM & input 30720, output 2048, batch 1 & 30.02 \\
 \bottomrule
 \end{tabular}
-\caption{Directional external comparison. Results are output tokens/s or reported tokens/s from the source. The GigaGPU rows use a similar 512/256/concurrency-10 aggregate-throughput shape. The Qwen official rows are single-request speed references and should not be directly compared to aggregate concurrency-10 throughput.}
+\caption{Directional comparison. The GigaGPU rows are the closest public
+512-input/256-output/10-concurrent shape. Qwen official rows are batch-1 speed
+references and should not be directly compared to aggregate concurrency-10 or
+concurrency-16 throughput.}
 \label{tab:external}
 \end{table}
 
-The most comparable public table is GigaGPU's April 2026 benchmark, which states that it used vLLM 0.8.x with continuous batching, 512-token prompts, 256-token generations, and 10 concurrent users \cite{gigagpu_2026}. Under that shape, their Qwen 2.5 72B Q4 entries report 32 tok/s on RTX 3090, 58--82 tok/s on RTX 5090 variants, and 45 tok/s on RTX 6000 Pro. Our L20 result is above that range and adds a day-long stability measurement. This does not prove that L20 is generally faster than those GPUs; it shows that this particular L20/AWQ-Marlin/vLLM configuration is highly competitive under the tested shape.
+The closest public table is GigaGPU's April 2026 benchmark, which reports
+512-token prompts, 256-token generations, and 10 concurrent users for Qwen 2.5
+72B Q4 \cite{gigagpu_2026}. Under that shape, this single-L20 AWQ Marlin result
+is above the published single-GPU figures in that table. This does not prove
+that L20 is generally faster than those GPUs; it shows that this specific
+vLLM/AWQ-Marlin configuration is competitive under the tested workload.
 
-The Qwen official speed benchmark is valuable for sanity checking, but it is not the same test. Qwen reports single-request 72B AWQ vLLM speed on two A100 80GB GPUs at batch size 1 and long 2048-token outputs, with speeds from 44.30 tok/s at input length 1 to 30.02 tok/s at input length 30,720 \cite{qwen25_speed_benchmark}. Those numbers measure a different operating point: high-quality multi-GPU single-request speed and long-context behavior, not aggregate 10-concurrent serving on a 48GB card.
+The model itself is not new. Qwen2.5-72B-Instruct is documented by the Qwen
+team's model card and technical report \cite{qwen25_model_card,qwen25_report}.
+Qwen's official speed benchmark is useful context for batch-1 and long-output
+operating points, but it measures different shapes from the aggregate serving
+workloads studied here \cite{qwen25_speed_benchmark}.
 
-NVIDIA NIM's supported-model table is also instructive. Its optimized Qwen2.5 72B Instruct L20 FP8 profiles list 4 or 8 L20 GPUs, while A100 SXM BF16 profiles list 4 or 8 GPUs depending on profile \cite{nvidia_nim_supported}. Our result therefore demonstrates a different deployment path: single-L20 AWQ Marlin outside the conservative optimized FP8 profile matrix.
+NVIDIA NIM's supported-model table is also relevant. Its optimized Qwen2.5 72B
+Instruct FP8 L20 profiles list 4 or 8 L20 GPUs, while A100 SXM BF16 profiles
+also use multi-GPU configurations depending on profile \cite{nvidia_nim_supported}.
+Our result demonstrates a different deployment point: single-L20 AWQ Marlin
+outside that conservative FP8 profile matrix.
 
 \section{Discussion}
 
-\subsection{Why the Result Is Strong}
+\subsection{The Result Is Throughput-Oriented}
 
-The strongest aspect of the result is not the absolute throughput alone. It is the agreement between the short concurrency-10 screening run and the day-long run. A short run at 108.70 output tok/s could be a transient peak. A 24-hour run at 108.84 output tok/s with zero failures and no OOM/error signatures is evidence of sustained stability under that exact workload.
+The service is not a low-latency chat profile. At concurrency 16, the repeated
+run mean p95 TTFT is 11.91s and p95 end-to-end latency is 34.95s for fixed
+256-token outputs. This is useful for batch generation, asynchronous agents,
+offline summarization, internal processing, and throughput-oriented serving. It
+is not ideal for interactive applications that require sub-second first tokens.
 
-The result is also practically meaningful because it uses a single 48GB-class GPU. Many public 70B serving configurations rely on 80GB GPUs or multi-GPU tensor parallelism. A single-GPU deployment avoids inter-GPU communication, simplifies scheduling, and reduces operational complexity. The tradeoff is that model length, concurrency, and latency must be tightly controlled.
+\subsection{Why Repetition Matters}
 
-\subsection{Throughput Versus Latency}
+The repeated runs strengthen the report because they show that the screening
+numbers were not one-off peaks. Concurrency 8 is highly stable across three
+runs. Concurrency 16 has wider throughput variance, but the mean remains close
+to the initial single-run result and all runs complete successfully. The 24-hour
+soak provides a different kind of evidence: long-run operational stability at
+the more balanced concurrency-10 point.
 
-The service is throughput-oriented. At concurrency 10, p95 TTFT is 6.61s and p95 latency is 23.54s for 256-token outputs. This may be acceptable for batch generation, background summarization, asynchronous agents, or internal processing pipelines. It is less appropriate for low-latency interactive chat where users expect the first token in under a second. Reducing concurrency, shortening inputs or outputs, enabling a different scheduler profile, or using a smaller model would improve latency at the cost of aggregate throughput.
+\subsection{What Would Make This a Stronger Research Paper}
 
-\subsection{The Role of Context Length}
+The report becomes closer to a full research paper if it answers comparative
+questions rather than only characterizing one deployment point. The highest
+priority additions are:
 
-The main result uses \texttt{max\_model\_len} set to 1024. This is a deliberate throughput configuration. Qwen2.5-72B supports much longer contexts, but long context shifts the bottleneck by increasing prefill cost and KV-cache pressure. The 4K and 8K single-concurrency checks show feasibility, not throughput. A separate paper-quality long-context claim should use fixed 4K/8K/16K workloads, concurrency sweeps, and independent soak tests.
-
-\subsection{What This Does Not Prove}
-
-The result does not prove that the AWQ model is lossless relative to FP16/BF16. It does not prove that all 70B models fit or perform similarly on L20. It does not prove production reliability across arbitrary prompts, tool use, long outputs, multi-tenant traffic, or long-context retrieval workloads. It also does not prove full-system energy efficiency, because we measured GPU board power rather than wall power.
-
-These limitations are not cosmetic; they define the next experiments. A strong systems result becomes a stronger research result when paired with quality retention and broader deployment ablations.
+\begin{itemize}
+  \item BF16/FP16 baseline quality retention using the same prompts, datasets,
+        decoding settings, and scorers.
+  \item MT-Bench judge scoring with an external judge model and answer-order
+        swapping.
+  \item Runtime ablation: vLLM versus SGLang versus llama.cpp/GGUF.
+  \item Quantization ablation: AWQ versus GPTQ versus FP8 where compatible.
+  \item Multiple models: Llama 70B, DeepSeek distill 70B, and Qwen3-class 70B
+        checkpoints where available.
+\end{itemize}
 
 \section{Threats to Validity}
 
 \paragraph{Single model and quantization path.}
-All main results use Qwen2.5-72B-Instruct-AWQ with AWQ Marlin. GPTQ, GGUF, FP8, EXL2, and other 70B-class models may behave differently.
+The main results use Qwen2.5-72B-Instruct-AWQ with AWQ Marlin. Other models,
+quantization formats, and kernels may behave differently.
 
 \paragraph{Fixed workload.}
-The 24-hour workload uses approximately 512 input tokens and exactly 256 output tokens with concurrency 10. Real traffic has variable prompt lengths, output lengths, retries, user disconnects, tool calls, and burstiness.
+The primary workload has approximately 512 input tokens and fixed 256 output
+tokens. Real traffic varies in prompt length, output length, retry behavior,
+tool calls, and burstiness.
 
-\paragraph{Quality not evaluated.}
-The report measures serving capacity and stability. It does not evaluate MMLU, CMMLU, GSM8K, MT-Bench, LongBench, or domain-specific quality retention against an FP16/BF16 baseline.
+\paragraph{Short-context throughput profile.}
+The highest-throughput results use \texttt{max\_model\_len=1024}. They should
+not be generalized to high-concurrency 8K, 16K, or 32K serving.
+
+\paragraph{No BF16/FP16 retention yet.}
+Absolute AWQ quality scores do not prove retention against full precision. A
+matched baseline endpoint is required.
+
+\paragraph{MT-Bench generation is not judge scoring.}
+The MT-Bench run generated 80/80 answers, but no external judge score is
+available.
 
 \paragraph{Energy scope.}
-Energy is GPU-board energy from \texttt{nvidia-smi}, not wall energy. Board-power sampling is useful for regression but incomplete for cost or emissions accounting.
+Energy is GPU-board energy from \texttt{nvidia-smi}, not wall energy.
 
-\paragraph{No multi-run confidence intervals.}
-The 24-hour run is a single day-long run. Repeating the run across days, hosts, driver versions, and ambient conditions would improve statistical confidence.
+\paragraph{Small repeated-run sample.}
+The repeated fixed-shape CI uses three runs per condition. This is enough to
+catch gross instability, but broader statistical confidence would require more
+runs across days, hosts, driver versions, and ambient conditions.
 
-\section{Future Work}
+\section{Reproducibility}
 
-The next stage should prioritize quality retention:
+The benchmark code and documentation are available at:
 
-\begin{itemize}[leftmargin=1.5em]
-  \item Run MMLU/MMLU-Pro, CMMLU/C-Eval, GSM8K/MATH, MT-Bench/Arena-Hard, and LongBench/LongBench v2.
-  \item Compare the AWQ candidate against a high-quality full-precision Qwen2.5-72B endpoint or a trusted hosted reference. A single L20 cannot host that baseline locally.
-  \item Add additional 70B-class models: Llama 3.3 70B AWQ, DeepSeek-R1-Distill-Llama-70B AWQ, and Qwen3 70B-class checkpoints if suitable quantized variants are available.
-  \item Compare runtimes: vLLM, SGLang, llama.cpp/GGUF, and TensorRT-LLM where compatible.
-  \item Add quantization ablations: AWQ Marlin, GPTQ Marlin, FP8 where hardware and profiles permit, and GGUF Q4 variants.
-  \item Measure wall power in addition to GPU-board power, and report cost per million output tokens under realistic electricity pricing.
+\begin{quote}
+\url{https://github.com/Kevin-Li-2025/llm-quant-bench}
+\end{quote}
+
+Key remote artifact paths:
+
+\begin{itemize}
+  \item 24h soak:
+        \texttt{/home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/}\\
+        \texttt{soak-24h-fixed512x256-c10-20260519T034856Z}
+  \item Repeated fixed-shape CI:
+        \texttt{/home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/}\\
+        \texttt{repeated-fixed512x256-vllm-awq-20260520T120138Z}
+  \item Quality evaluation:
+        \texttt{/home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/}\\
+        \texttt{quality-eval-20260520T084323Z}
+  \item BF16/MT-Bench preflight:
+        \texttt{/home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/}\\
+        \texttt{bf16-mtbench-preflight-20260520T123916Z}
 \end{itemize}
 
-\section{Conclusion}
-
-This report shows that a single NVIDIA L20 can sustain Qwen2.5-72B-Instruct-AWQ serving for 24 hours under a fixed 512-input/256-output, concurrency-10 workload when configured with vLLM 0.8.5.post1 and AWQ Marlin. The system completed 36,740 requests with 100\% success, sustained 108.84 output tokens/s, consumed an estimated 7.92 kWh of GPU-board energy, and showed no OOM/error signatures. The result is strong evidence for a specific single-L20 70B-class throughput-serving configuration. It should be framed as sustained serving evidence, not as a lossless-quality or general-production claim. The most important next step is to pair this systems result with rigorous quality-retention evaluation.
-
-\appendix
-
-\section{Reproducibility Checklist}
-
-\begin{itemize}[leftmargin=1.5em]
-  \item Repository: \url{https://github.com/Kevin-Li-2025/llm-quant-bench}
-  \item Result commit: \texttt{20558b4 Document 24h L20 soak results}.
-  \item Remote root: \path{/home/hhai/llm-quant-bench}.
-  \item Run path: \path{runs/qwen72b-awq-l20/}
-        \path{soak-24h-fixed512x256-c10-20260519T034856Z}.
-  \item Load summary: \path{load/load_summary.json}.
-  \item Power log: \path{gpu_power.csv}.
-  \item Energy summary: \path{energy_summary.json}.
-\end{itemize}
-
-Benchmark command:
+Representative load command:
 
 \begin{verbatim}
 python3 -m llm_quant_bench load \
@@ -386,26 +678,34 @@ python3 -m llm_quant_bench load \
   --stream-usage
 \end{verbatim}
 
-Energy command:
+Representative repeated-run command:
 
 \begin{verbatim}
-python3 scripts/summarize_energy.py \
-  --summary .../load/load_summary.json \
-  --power-log .../gpu_power.csv \
-  --out .../energy_summary.json
+python3 scripts/run_repeated_load.py \
+  --config runs/qwen72b-awq-l20/config.fixed512x256.json \
+  --dataset runs/qwen72b-awq-l20/fixed-512in-256out.jsonl \
+  --out runs/qwen72b-awq-l20/repeated-fixed512x256-vllm-awq \
+  --concurrencies 1 4 8 16 \
+  --repeats 3 \
+  --duration-seconds 120 \
+  --stream-usage
 \end{verbatim}
 
-\section{Recommended arXiv Readiness Checklist}
+\section{Conclusion}
 
-Before submission, the report should add:
+This report shows that a single NVIDIA L20 can sustain Qwen2.5-72B-Instruct-AWQ
+serving under a fixed short-context throughput workload. The strongest evidence
+is the combination of a 24-hour concurrency-10 soak at 108.84 output tokens/s,
+12/12 successful repeated fixed-shape runs, and a repeated concurrency-16 mean
+of 127.22 $\pm$ 12.68 output tokens/s. The result is meaningful because it
+documents a practical single-accelerator deployment point for a 70B-class model
+with explicit latency, energy, quality, and limitation boundaries.
 
-\begin{itemize}[leftmargin=1.5em]
-  \item A quality-retention section with baseline-vs-AWQ results.
-  \item A complete hardware table including driver version, CUDA version, CPU, RAM, disk, and host power measurement if available.
-  \item At least one repeated shorter run to establish run-to-run variance.
-  \item A public artifact bundle or redacted sample of the fixed-shape prompt generator.
-  \item A stronger related-work section covering LLM serving, quantization, and energy-aware inference.
-\end{itemize}
+The correct interpretation is narrow but useful: single-L20 70B AWQ serving is
+feasible and stable for a controlled throughput-oriented workload. Stronger
+claims about lossless quality, full-precision retention, judge-scored
+instruction following, long-context high-concurrency serving, or general
+production replacement require additional baseline and ablation experiments.
 
 \bibliographystyle{plain}
 \bibliography{references}
