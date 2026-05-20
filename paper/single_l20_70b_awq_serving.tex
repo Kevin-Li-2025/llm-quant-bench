@@ -7,7 +7,6 @@
 \usepackage{enumitem}
 \usepackage{xcolor}
 \usepackage{array}
-\usepackage{longtable}
 
 \hypersetup{
   colorlinks=true,
@@ -18,8 +17,10 @@
 
 \emergencystretch=2em
 \setlist[itemize]{leftmargin=1.5em}
+\newcommand{\qwenawq}{Qwen2.5\nobreakdash-72B\nobreakdash-Instruct\nobreakdash-AWQ}
+\newcommand{\qwenbase}{Qwen2.5\nobreakdash-72B}
 
-\title{Sustained 70B AWQ Inference on a Single NVIDIA L20:\\
+\title{Sustained 70B-Class AWQ Inference on a Single NVIDIA L20:\\
 Throughput, Stability, Energy, and Quality Characterization}
 
 \author{
@@ -38,7 +39,7 @@ Serving 70B-class open-weight language models is usually associated with
 inference profiles. This report asks a narrower systems question: can a single
 NVIDIA L20 48GB GPU sustain a useful 70B-class quantized serving workload, and
 what are the throughput, latency, stability, energy, and quality boundaries of
-that configuration? We evaluate Qwen2.5-72B-Instruct-AWQ served with vLLM
+that configuration? We evaluate \qwenawq{} served with vLLM
 0.8.5.post1 and AWQ Marlin on one L20. Under a fixed workload of approximately
 512 input tokens and 256 output tokens, a 24-hour concurrency-10 soak completed
 36,740/36,740 requests with no request failures and no vLLM CUDA OOM, traceback,
@@ -55,12 +56,12 @@ also produced absolute quality scores of 0.8130 on MMLU, 0.8309 on CMMLU, and
 LongBench subset.
 
 The evidence supports a specific claim: a carefully configured single L20 can
-serve Qwen2.5-72B-Instruct-AWQ as a throughput-oriented 70B endpoint under the
-tested fixed-shape workload. It does not prove lossless AWQ quality retention,
-low-latency interactive serving, broad production SLA coverage, or equivalence
-to a BF16/FP16 baseline. BF16/FP16 baseline retention and MT-Bench judge scoring
-remain blocked until external or multi-GPU baseline and judge endpoints are
-available.
+serve \qwenawq{} as a throughput-oriented 70B-class endpoint under
+the tested fixed-shape workload. It does not prove lossless AWQ quality
+retention, low-latency interactive serving, broad production SLA coverage, or
+equivalence to a BF16/FP16 baseline. BF16/FP16 baseline retention and MT-Bench
+judge scoring remain blocked until external or multi-GPU baseline and judge
+endpoints are available.
 \end{abstract}
 
 \section{Executive Summary}
@@ -78,7 +79,7 @@ headline measurements.
 \toprule
 Measurement & Result \\
 \midrule
-Model & Qwen2.5-72B-Instruct-AWQ \\
+Model & \qwenawq{} \\
 Runtime & vLLM 0.8.5.post1, AWQ Marlin \\
 GPU & 1x NVIDIA L20, 46GB visible VRAM \\
 Fixed-shape workload & approx. 512 input / 256 output tokens \\
@@ -111,7 +112,7 @@ stronger quality-retention claims.
 The supported claim is:
 
 \begin{quote}
-A single NVIDIA L20 can sustain Qwen2.5-72B-Instruct-AWQ serving under a fixed
+A single NVIDIA L20 can sustain \qwenawq{} serving under a fixed
 approximately 512 input / 256 output token workload, with 24-hour stability at
 concurrency 10 and repeated short-run throughput near 127 output tokens/s at
 concurrency 16.
@@ -160,7 +161,7 @@ confidence intervals, energy estimates, and quality checks.
 
 \begin{itemize}
   \item We report a 24-hour concurrency-10 fixed-shape soak of
-        Qwen2.5-72B-Instruct-AWQ on one NVIDIA L20, including success rate,
+        \qwenawq{} on one NVIDIA L20, including success rate,
         TTFT, latency, output throughput, request throughput, GPU-board energy,
         and log-based OOM/error checks.
   \item We repeat the fixed-shape workload at concurrency 1, 4, 8, and 16 with
@@ -225,7 +226,7 @@ Component & Configuration \\
 \midrule
 GPU & 1x NVIDIA L20 \\
 Visible GPU memory & 46,068 MiB reported by \texttt{nvidia-smi} \\
-Model & Qwen/Qwen2.5-72B-Instruct-AWQ \\
+Model & Qwen/\qwenawq{} \\
 Runtime & vLLM 0.8.5.post1 \\
 Quantization path & AWQ Marlin \\
 Serving API & OpenAI-compatible \texttt{/v1/chat/completions} \\
@@ -275,6 +276,13 @@ The fixed-shape benchmark was designed to be close to public serving tables:
 
 The 24-hour soak reused the same workload at concurrency 10. Repeated short runs
 used concurrency 1, 4, 8, and 16 with three repeats per condition.
+
+This benchmark is MLPerf-inspired in the sense that it fixes the system under
+test, workload shape, quality checks, and tail-latency measurements, but it is
+not an MLPerf submission. It does not use MLPerf LoadGen, a Poisson server
+scenario, an audited latency constraint, or an official quality target. The
+numbers should therefore be interpreted as repo-native fixed-shape serving
+measurements.
 
 \subsection{Energy and Confidence Intervals}
 
@@ -538,14 +546,14 @@ concurrency, sampling settings, and measurement method.
 \toprule
 Source & Hardware & Model / Quant & Shape & Result \\
 \midrule
-This work & 1x L20 48GB & Qwen2.5-72B AWQ Marlin & 512/256, c10, 24h & 108.84 \\
-This work & 1x L20 48GB & Qwen2.5-72B AWQ Marlin & 512/256, c16, repeated & 127.22 $\pm$ 12.68 \\
+This work & 1x L20 48GB & \qwenbase{} AWQ Marlin & 512/256, c10, 24h & 108.84 \\
+This work & 1x L20 48GB & \qwenbase{} AWQ Marlin & 512/256, c16, repeated & 127.22 $\pm$ 12.68 \\
 GigaGPU Apr. 2026 & 1x RTX 3090 & Qwen 2.5 72B Q4 & 512/256, c10 & 32 \\
 GigaGPU Apr. 2026 & 1x RTX 5090 & Qwen 2.5 72B Q4 & 512/256, c10 & 58--82 \\
 GigaGPU Apr. 2026 & 1x RTX 6000 Pro & Qwen 2.5 72B Q4 & 512/256, c10 & 45 \\
-Qwen official & 1x A100 80GB & Qwen2.5-72B AWQ, Transformers & input 1, output 2048, batch 1 & 11.50 \\
-Qwen official & 2x A100 80GB & Qwen2.5-72B AWQ, vLLM & input 1, output 2048, batch 1 & 44.30 \\
-Qwen official & 2x A100 80GB & Qwen2.5-72B AWQ, vLLM & input 30720, output 2048, batch 1 & 30.02 \\
+Qwen official & 1x A100 80GB & \qwenbase{} AWQ, Transformers & input 1, output 2048, batch 1 & 11.50 \\
+Qwen official & 2x A100 80GB & \qwenbase{} AWQ, vLLM & input 1, output 2048, batch 1 & 44.30 \\
+Qwen official & 2x A100 80GB & \qwenbase{} AWQ, vLLM & input 30720, output 2048, batch 1 & 30.02 \\
 \bottomrule
 \end{tabular}
 \caption{Directional comparison. The GigaGPU rows are the closest public
@@ -562,7 +570,7 @@ is above the published single-GPU figures in that table. This does not prove
 that L20 is generally faster than those GPUs; it shows that this specific
 vLLM/AWQ-Marlin configuration is competitive under the tested workload.
 
-The model itself is not new. Qwen2.5-72B-Instruct is documented by the Qwen
+The model itself is not new. \qwenbase{}-Instruct is documented by the Qwen
 team's model card and technical report \cite{qwen25_model_card,qwen25_report}.
 Qwen's official speed benchmark is useful context for batch-1 and long-output
 operating points, but it measures different shapes from the aggregate serving
@@ -664,7 +672,8 @@ Strong: repo, commands, generated PDF, and arXiv source package &
 Publish raw logs/checksums or a reproducible artifact archive \\
 Narrative/figures & A few plots that make the result visually obvious &
 Weak: mostly tables &
-Add throughput-latency curves, power trace, and quality summary figures \\
+Add throughput-latency curves, power trace, quality summary figures, and an
+MLPerf-style server scenario if comparability becomes the goal \\
 \bottomrule
 \end{tabular}
 \caption{Self-audit against common expectations in high-quality technical
@@ -681,7 +690,7 @@ replication.
 \section{Threats to Validity}
 
 \paragraph{Single model and quantization path.}
-The main results use Qwen2.5-72B-Instruct-AWQ with AWQ Marlin. Other models,
+The main results use \qwenawq{} with AWQ Marlin. Other models,
 quantization formats, and kernels may behave differently.
 
 \paragraph{Fixed workload.}
@@ -761,7 +770,7 @@ python3 scripts/run_repeated_load.py \
 
 \section{Conclusion}
 
-This report shows that a single NVIDIA L20 can sustain Qwen2.5-72B-Instruct-AWQ
+This report shows that a single NVIDIA L20 can sustain \qwenawq{}
 serving under a fixed short-context throughput workload. The strongest evidence
 is the combination of a 24-hour concurrency-10 soak at 108.84 output tokens/s,
 12/12 successful repeated fixed-shape runs, and a repeated concurrency-16 mean
@@ -769,8 +778,9 @@ of 127.22 $\pm$ 12.68 output tokens/s. The result is meaningful because it
 documents a practical single-accelerator deployment point for a 70B-class model
 with explicit latency, energy, quality, and limitation boundaries.
 
-The correct interpretation is narrow but useful: single-L20 70B AWQ serving is
-feasible and stable for a controlled throughput-oriented workload. Stronger
+The correct interpretation is narrow but useful: single-L20 70B-class AWQ
+serving is feasible and stable for a controlled throughput-oriented workload.
+Stronger
 claims about lossless quality, full-precision retention, judge-scored
 instruction following, long-context high-concurrency serving, or general
 production replacement require additional baseline and ablation experiments.
