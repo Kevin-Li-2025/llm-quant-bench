@@ -8,11 +8,22 @@ Yushi Bai, Xin Lv, Jiajie Zhang, Hongchang Lyu, Jiankai Tang, Zhidian Huang,
   understanding.
 \newblock {\em arXiv preprint arXiv:2308.14508}, 2023.
 
+\bibitem{deepseekv3_report}
+{DeepSeek-AI}.
+\newblock Deepseek-v3 technical report.
+\newblock {\em arXiv preprint arXiv:2412.19437}, 2024.
+
 \bibitem{marlin}
 Elias Frantar, Saleh Ashkboos, Torsten Hoefler, and Dan Alistarh.
 \newblock Marlin: Mixed-precision auto-regressive parallel inference on large
   language models.
 \newblock {\em arXiv preprint arXiv:2408.11743}, 2024.
+
+\bibitem{gemini15_report}
+{Gemini Team, Google}.
+\newblock Gemini 1.5: Unlocking multimodal understanding across millions of
+  tokens of context.
+\newblock {\em arXiv preprint arXiv:2403.05530}, 2024.
 
 \bibitem{gigagpu_2026}
 {GigaGPU}.
@@ -35,6 +46,11 @@ Ji~Lin, Jiaming Tang, Haotian Tang, Shang Yang, Xingyu Chen, and Song Han.
   acceleration.
 \newblock {\em Proceedings of Machine Learning and Systems}, 2024.
 
+\bibitem{llama3_report}
+{Llama Team, AI @ Meta}.
+\newblock The llama 3 herd of models.
+\newblock {\em arXiv preprint arXiv:2407.21783}, 2024.
+
 \bibitem{genai_perf_docs}
 {NVIDIA}.
 \newblock Nvidia genai-perf: Metrics and benchmarking documentation.
@@ -51,6 +67,11 @@ Ji~Lin, Jiaming Tang, Haotian Tang, Shang Yang, Xingyu Chen, and Song Han.
   2026.
 \newblock Accessed 2026-05-20.
 
+\bibitem{gpt4_report}
+{OpenAI}.
+\newblock Gpt-4 technical report.
+\newblock Technical report, OpenAI, 2023.
+
 \bibitem{qwen25_model_card}
 {Qwen Team}.
 \newblock Qwen2.5-72b-instruct model card.
@@ -64,6 +85,13 @@ Ji~Lin, Jiaming Tang, Haotian Tang, Shang Yang, Xingyu Chen, and Song Han.
   \url{https://qwen.readthedocs.io/en/v2.5/benchmark/speed_benchmark.html},
   2024.
 \newblock Accessed 2026-05-20.
+
+\bibitem{mlperf_inference}
+Vijay~Janapa Reddi, Christine Cheng, David Kanter, Peter Mattson, Guenther
+  Schmuelling, Carole-Jean Wu, Brian Anderson, Maximilien Breughe, Mark
+  Charlebois, William Chou, et~al.
+\newblock Mlperf inference benchmark.
+\newblock {\em arXiv preprint arXiv:1911.02549}, 2019.
 
 \bibitem{qwen25_report}
 Qwen Team.

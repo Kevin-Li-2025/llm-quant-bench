@@ -610,6 +610,74 @@ priority additions are:
         checkpoints where available.
 \end{itemize}
 
+\section{Reporting Checklist Against Strong Technical Reports}
+
+Strong modern technical reports tend to combine a narrow central claim, complete
+experimental context, broad evaluations, clear failure analysis, and explicit
+release artifacts. GPT-4 emphasizes capability, limitation, and safety
+evaluation while withholding some architecture details \cite{gpt4_report}.
+Llama 3 and Gemini 1.5 provide broad evaluation suites across model variants and
+modalities \cite{llama3_report,gemini15_report}. DeepSeek-V3 highlights
+architecture, training stability, cost, and inference efficiency
+\cite{deepseekv3_report}. MLPerf Inference is not an LLM model report, but it
+sets a useful benchmark-reporting standard: fixed scenarios, quality targets,
+latency bounds, submission review, and reproducible result artifacts
+\cite{mlperf_inference}.
+
+Table~\ref{tab:reporting_checklist} audits this report against that standard.
+The purpose is to prevent overclaiming and to make the remaining work obvious.
+
+\begin{table}[h]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.22\linewidth}
+                >{\raggedright\arraybackslash}p{0.22\linewidth}
+                >{\raggedright\arraybackslash}p{0.22\linewidth}
+                >{\raggedright\arraybackslash}p{0.22\linewidth}}
+\toprule
+Dimension & Strong-report expectation & Current status & Upgrade needed \\
+\midrule
+Claim framing & One central claim with explicit scope and non-claims &
+Strong: supported claim and non-claims are stated early &
+Keep the claim narrow in title, abstract, and README \\
+Method details & Hardware, software, workload, decoding, and metrics &
+Strong for the measured vLLM/AWQ setup &
+Add driver/CUDA exact versions and wall-power instrumentation \\
+Statistical rigor & Repeated runs, uncertainty, and tail metrics &
+Moderate: 3 repeats per short condition plus 24h soak &
+Run more repeats across days or machines \\
+Quality evidence & Matched baselines and benchmark-specific scoring &
+Partial: MMLU/CMMLU/GSM8K absolute scores, MT-Bench generation, LongBench subset &
+Add BF16/FP16 retention, MT-Bench judge, and official LongBench runs \\
+Comparative evidence & Controlled ablations against alternatives &
+Weak: public directional comparisons only &
+Add vLLM/SGLang/llama.cpp and AWQ/GPTQ/FP8 ablations \\
+Failure analysis & OOM, errors, tails, and boundary conditions &
+Moderate: OOM/error scan and c24 tail-latency regression are reported &
+Add explicit failure-point sweeps for context and concurrency \\
+Energy/cost & Measurement scope and cost model &
+Partial: GPU-board energy only &
+Measure wall power and convert to cost/token \\
+Artifacts & Code, configs, raw outputs, and source package &
+Strong: repo, commands, generated PDF, and arXiv source package &
+Publish raw logs/checksums or a reproducible artifact archive \\
+Narrative/figures & A few plots that make the result visually obvious &
+Weak: mostly tables &
+Add throughput-latency curves, power trace, and quality summary figures \\
+\bottomrule
+\end{tabular}
+\caption{Self-audit against common expectations in high-quality technical
+reports and benchmark reports.}
+\label{tab:reporting_checklist}
+\end{table}
+
+Overall, the current document is credible as a narrow technical report. It is
+not yet a top-tier research paper because the strongest missing evidence is
+comparative rather than editorial: controlled full-precision retention, official
+judge scoring, runtime ablations, quantization ablations, and broader
+replication.
+
 \section{Threats to Validity}
 
 \paragraph{Single model and quantization path.}
