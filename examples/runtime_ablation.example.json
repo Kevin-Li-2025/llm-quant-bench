@@ -1,0 +1,82 @@
+{
+  "description": "Compare runtimes with the same OpenAI-compatible load benchmark shape.",
+  "experiments": [
+    {
+      "name": "qwen72b-awq-vllm",
+      "runtime": "vLLM",
+      "quant": "AWQ Marlin",
+      "serve_command": [
+        "bash",
+        "-lc",
+        "vllm serve /models/Qwen2.5-72B-Instruct-AWQ --host 0.0.0.0 --port 8001 --served-model-name qwen72b-awq --quantization awq_marlin --dtype half --max-model-len 1024 --max-num-seqs 48 --max-num-batched-tokens 4096 --trust-remote-code"
+      ],
+      "health_url": "http://127.0.0.1:8001/v1/models",
+      "model": {
+        "name": "qwen72b-awq-vllm",
+        "base_url": "http://127.0.0.1:8001/v1",
+        "model": "qwen72b-awq",
+        "temperature": 0,
+        "max_tokens": 256,
+        "extra_body": {
+          "min_tokens": 256,
+          "ignore_eos": true
+        }
+      },
+      "load": {
+        "dataset": "examples/golden_set.jsonl",
+        "concurrency": 10,
+        "requests": 80,
+        "stream": true,
+        "stream_usage": true
+      }
+    },
+    {
+      "name": "qwen72b-awq-sglang",
+      "runtime": "SGLang",
+      "quant": "AWQ",
+      "serve_command": [
+        "bash",
+        "-lc",
+        "python -m sglang.launch_server --model-path /models/Qwen2.5-72B-Instruct-AWQ --host 0.0.0.0 --port 8001 --served-model-name qwen72b-awq"
+      ],
+      "health_url": "http://127.0.0.1:8001/v1/models",
+      "model": {
+        "name": "qwen72b-awq-sglang",
+        "base_url": "http://127.0.0.1:8001/v1",
+        "model": "qwen72b-awq",
+        "temperature": 0,
+        "max_tokens": 256
+      },
+      "load": {
+        "dataset": "examples/golden_set.jsonl",
+        "concurrency": 10,
+        "requests": 80,
+        "stream": true
+      }
+    },
+    {
+      "name": "qwen72b-q4-llama-cpp",
+      "runtime": "llama.cpp",
+      "quant": "GGUF Q4",
+      "serve_command": [
+        "bash",
+        "-lc",
+        "llama-server -m /models/qwen2.5-72b-instruct-q4.gguf --host 0.0.0.0 --port 8001 --ctx-size 1024 --parallel 10"
+      ],
+      "health_url": "http://127.0.0.1:8001/v1/models",
+      "model": {
+        "name": "qwen72b-q4-llama-cpp",
+        "base_url": "http://127.0.0.1:8001/v1",
+        "model": "qwen72b-q4",
+        "temperature": 0,
+        "max_tokens": 256
+      },
+      "load": {
+        "dataset": "examples/golden_set.jsonl",
+        "concurrency": 10,
+        "requests": 80,
+        "stream": true
+      }
+    }
+  ]
+}

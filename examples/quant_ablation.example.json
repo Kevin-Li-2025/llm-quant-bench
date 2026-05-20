@@ -1,0 +1,100 @@
+{
+  "description": "Compare quantization formats under the same runtime and workload.",
+  "experiments": [
+    {
+      "name": "qwen72b-awq-marlin",
+      "runtime": "vLLM",
+      "quant": "AWQ Marlin",
+      "serve_command": [
+        "bash",
+        "-lc",
+        "vllm serve /models/Qwen2.5-72B-Instruct-AWQ --host 0.0.0.0 --port 8001 --served-model-name qwen72b-awq --quantization awq_marlin --dtype half --max-model-len 1024 --max-num-seqs 48 --max-num-batched-tokens 4096 --trust-remote-code"
+      ],
+      "health_url": "http://127.0.0.1:8001/v1/models",
+      "model": {
+        "name": "qwen72b-awq-marlin",
+        "base_url": "http://127.0.0.1:8001/v1",
+        "model": "qwen72b-awq",
+        "temperature": 0,
+        "max_tokens": 256,
+        "extra_body": {
+          "min_tokens": 256,
+          "ignore_eos": true
+        }
+      },
+      "load": {
+        "dataset": "examples/golden_set.jsonl",
+        "concurrency": 10,
+        "requests": 80,
+        "stream": true,
+        "stream_usage": true
+      },
+      "quality": {
+        "benchmarks": ["mmlu", "cmmlu", "gsm8k"],
+        "cmmlu_dir": "/datasets/cmmlu/test",
+        "concurrency": 8,
+        "limit": 200
+      }
+    },
+    {
+      "name": "qwen72b-gptq",
+      "runtime": "vLLM",
+      "quant": "GPTQ",
+      "serve_command": [
+        "bash",
+        "-lc",
+        "vllm serve /models/Qwen2.5-72B-Instruct-GPTQ --host 0.0.0.0 --port 8001 --served-model-name qwen72b-gptq --quantization gptq --dtype half --max-model-len 1024 --trust-remote-code"
+      ],
+      "health_url": "http://127.0.0.1:8001/v1/models",
+      "model": {
+        "name": "qwen72b-gptq",
+        "base_url": "http://127.0.0.1:8001/v1",
+        "model": "qwen72b-gptq",
+        "temperature": 0,
+        "max_tokens": 256
+      },
+      "load": {
+        "dataset": "examples/golden_set.jsonl",
+        "concurrency": 10,
+        "requests": 80,
+        "stream": true
+      },
+      "quality": {
+        "benchmarks": ["mmlu", "cmmlu", "gsm8k"],
+        "cmmlu_dir": "/datasets/cmmlu/test",
+        "concurrency": 8,
+        "limit": 200
+      }
+    },
+    {
+      "name": "qwen72b-fp8",
+      "runtime": "vLLM or TensorRT-LLM",
+      "quant": "FP8",
+      "serve_command": [
+        "bash",
+        "-lc",
+        "echo Replace this with a real FP8 serving command; exit 1"
+      ],
+      "health_url": "http://127.0.0.1:8001/v1/models",
+      "model": {
+        "name": "qwen72b-fp8",
+        "base_url": "http://127.0.0.1:8001/v1",
+        "model": "qwen72b-fp8",
+        "temperature": 0,
+        "max_tokens": 256
+      },
+      "load": {
+        "dataset": "examples/golden_set.jsonl",
+        "concurrency": 10,
+        "requests": 80,
+        "stream": true
+      },
+      "quality": {
+        "benchmarks": ["mmlu", "cmmlu", "gsm8k"],
+        "cmmlu_dir": "/datasets/cmmlu/test",
+        "concurrency": 8,
+        "limit": 200
+      }
+    }
+  ]
+}

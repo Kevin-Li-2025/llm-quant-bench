@@ -83,6 +83,98 @@ The practical interpretation is that single-L20 Qwen2.5-72B AWQ serving is feasi
 
 The 24h fixed-shape c10 soak test completed with GPU power logging and zero request failures. The follow-up plan for quality retention, additional 70B models, additional runtimes, and AWQ/GPTQ/FP8 ablations is tracked in [docs/research-experiment-plan.md](docs/research-experiment-plan.md).
 
+## Quality Evaluation Snapshot
+
+The first AWQ candidate quality pass completed on the same L20 setup. See [docs/l20-qwen72b-awq-quality-results.md](docs/l20-qwen72b-awq-quality-results.md) for run directories, commands, and caveats.
+
+| Evaluation | Context | Items | OK | Failed | Score | p95 Latency | Notes |
+|---|---:|---:|---:|---:|---:|---:|---|
+| MMLU | 1024 | 14,042 | 14,039 | 3 | 0.8130 | 3.19s | 3 prompts exceeded the 1024-token service limit. |
+| CMMLU | 1024 | 11,582 | 11,582 | 0 | 0.8309 | 1.49s | Zero-shot direct-choice scoring. |
+| GSM8K | 1024 | 1,319 | 1,319 | 0 | 0.8082 | 16.65s | Final-number exact match. |
+| MT-Bench generation | 1024 | 80 | 80 | 0 | pending judge | 31.13s | Answer generation only; no external judge was available. |
+| LongBench subset | 8192 | 60 | 60 | 0 | 0.2038 | 16.03s | Lightweight max token-F1, not an official leaderboard score. |
+
+These are absolute AWQ candidate results. They are not BF16/FP16-vs-AWQ quality-retention results.
+
+## Quality Retention Status
+
+The current quality run should be interpreted as an AWQ candidate evaluation, not
+as a completed baseline-vs-quantized retention claim. A true retention result
+requires the same benchmark prompts, prompt templates, decoding settings, scorer,
+and answer extraction to be run against a matched FP16/BF16 reference endpoint.
+
+The single L20 used in this experiment cannot host the Qwen2.5-72B FP16/BF16
+checkpoint locally. Therefore, baseline-vs-AWQ quality retention is pending until
+one of the following is available:
+
+- a multi-GPU FP16/BF16 Qwen2.5-72B-Instruct endpoint;
+- a trusted hosted Qwen2.5-72B-Instruct endpoint with compatible decoding
+  controls; or
+- a previously captured FP16/BF16 result set generated with the same runner and
+  dataset version.
+
+Until then, the supported claim is:
+
+```text
+Qwen2.5-72B-Instruct-AWQ on one L20 is operationally stable and retains strong
+absolute benchmark performance under the tested prompts.
+```
+
+The unsupported claim is:
+
+```text
+Qwen2.5-72B-Instruct-AWQ is lossless versus BF16/FP16.
+```
+
+The repo now includes executable scaffolding for the missing research pieces:
+
+| Gap | Script / Manifest | Output |
+|---|---|---|
+| BF16/FP16 baseline retention | `scripts/run_quality_retention.py` | matched baseline/candidate summaries plus `quality_retention.json` |
+| MT-Bench judge score | `scripts/score_mt_bench.py` | `judgments.jsonl`, judge `summary.json`, and `report.md` |
+| LongBench 8K quality | `scripts/run_longbench_8k.py` | LongBench subset `summary.json` and run manifest |
+| vLLM vs SGLang vs llama.cpp | `scripts/run_ablation_matrix.py` with `examples/runtime_ablation.example.json` | per-runtime load summaries and `ablation_report.md` |
+| AWQ vs GPTQ vs FP8 | `scripts/run_ablation_matrix.py` with `examples/quant_ablation.example.json` | per-quant load/quality summaries and `ablation_report.md` |
+
+Example baseline retention run, once a real BF16/FP16 endpoint exists:
+
+```bash
+python3 scripts/run_quality_retention.py \
+  --out runs/qwen72b-awq-vs-bf16-retention \
+  --baseline-base-url http://BASELINE_HOST:8001/v1 \
+  --baseline-model qwen72b-bf16 \
+  --candidate-base-url http://127.0.0.1:8001/v1 \
+  --candidate-model qwen72b-awq-l20 \
+  --benchmarks mmlu cmmlu gsm8k \
+  --cmmlu-dir /path/to/cmmlu/test \
+  --concurrency 8
+```
+
+Example MT-Bench judge pass:
+
+```bash
+python3 scripts/score_mt_bench.py \
+  --out runs/qwen72b-awq-mt-bench-judge \
+  --samples runs/qwen72b-awq-mt-bench/samples.jsonl \
+  --judge-base-url http://JUDGE_HOST:8001/v1 \
+  --judge-model judge-model-name \
+  --concurrency 4
+```
+
+Example LongBench 8K subset run:
+
+```bash
+python3 scripts/run_longbench_8k.py \
+  --out runs/qwen72b-awq-longbench-8k \
+  --base-url http://127.0.0.1:8001/v1 \
+  --model qwen72b-awq-l20 \
+  --longbench-dir /path/to/LongBench/data \
+  --tasks multifieldqa_en hotpotqa qasper passage_count lcc gov_report \
+  --max-per-task 20 \
+  --concurrency 1
+```
+
 Recommended external benchmarks to add:
 
 - General capability: `lm-evaluation-harness`, for example MMLU/MMLU-Pro, GPQA, GSM8K/MATH, ARC, HellaSwag, and TruthfulQA.
@@ -334,6 +426,51 @@ A practical definition of "near-lossless sustained usability" for a single-L20 7
 For stronger evidence, expand `examples/golden_set.jsonl` to 200-1000 samples covering your real traffic: RAG, code, JSON tool calls, long-document summarization, math reasoning, safety refusals, multi-turn dialogue, and high-frequency support questions.
 
 ## External Benchmark Commands
+
+This repo also includes a lightweight endpoint-based quality runner for same-prompt
+candidate-vs-baseline retention checks. It is useful when the target model is
+already served through an OpenAI-compatible endpoint and official harnesses are
+too heavy for a first systems pass.
+
+```bash
+python3 scripts/run_quality_eval.py \
+  --out runs/qwen72b-awq-quality \
+  --base-url http://127.0.0.1:8001/v1 \
+  --model qwen72b-awq-l20 \
+  --benchmarks mmlu cmmlu gsm8k \
+  --cmmlu-dir /path/to/cmmlu/test \
+  --concurrency 8
+```
+
+For LongBench, use a long-context service configuration and pass local JSONL
+files:
+
+```bash
+python3 scripts/run_quality_eval.py \
+  --out runs/qwen72b-awq-longbench \
+  --base-url http://127.0.0.1:8001/v1 \
+  --model qwen72b-awq-l20 \
+  --benchmarks longbench \
+  --longbench-dir /path/to/LongBench/data \
+  --longbench-tasks multifieldqa_en hotpotqa qasper \
+  --concurrency 1
+```
+
+When both baseline and candidate summaries are available, compute retention with:
+
+```bash
+python3 scripts/summarize_quality_retention.py \
+  --baseline-summary runs/baseline-quality/summary.json \
+  --candidate-summary runs/qwen72b-awq-quality/summary.json \
+  --out runs/qwen72b-awq-quality/quality_retention.json
+```
+
+The formula is:
+
+```text
+quality_retention = candidate_score / baseline_score
+delta_percentage_points = 100 * (candidate_score - baseline_score)
+```
 
 `lm-evaluation-harness` is useful for general capability checks:
 

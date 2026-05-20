@@ -58,6 +58,25 @@ Required baseline:
 - FP16/BF16 Qwen2.5-72B-Instruct endpoint, or a trusted hosted Qwen2.5-72B-Instruct endpoint.
 - The current L20 cannot host FP16/BF16 72B locally, and the current machine has only 69GB free disk, so the baseline must be external or multi-GPU.
 
+Important caveat:
+
+The AWQ benchmark results alone are not a baseline-vs-AWQ quality-retention
+measurement. They are candidate absolute scores. A retention claim requires a
+matched FP16/BF16 baseline run with the same dataset snapshot, prompts, chat
+template, decoding parameters, scoring code, and answer extraction. Until that
+baseline exists, the correct wording is:
+
+```text
+The single-L20 AWQ candidate is stable and shows strong absolute quality on the
+tested benchmarks, but BF16/FP16-vs-AWQ quality retention remains pending.
+```
+
+Do not use wording such as:
+
+```text
+AWQ is lossless versus BF16/FP16.
+```
+
 Benchmarks:
 
 | Benchmark | Purpose | Candidate Command Shape |
@@ -74,6 +93,58 @@ Acceptance metrics:
 - pass if task-level retention is at least 0.98 for business-critical categories
 - report all drops over 2 percentage points individually
 - keep judge inconsistency under 5% for preference benchmarks
+
+Current execution status:
+
+- AWQ candidate endpoint: tested on the L20 through vLLM and AWQ Marlin.
+- MMLU, CMMLU, and GSM8K: completed with `scripts/run_quality_eval.py`; see [docs/l20-qwen72b-awq-quality-results.md](l20-qwen72b-awq-quality-results.md).
+- MT-Bench: 80/80 answer generations completed; official scoring still requires an external judge endpoint/key and answer-order-swapped judging.
+- LongBench: 8K subset completed with 60/60 successful requests using `max_model_len=8192`; the reported score is lightweight max token-F1, not an official leaderboard score.
+- FP16/BF16 baseline: blocked on an external or multi-GPU endpoint. A single L20 cannot host Qwen2.5-72B FP16/BF16, so true baseline-vs-AWQ retention remains pending until a baseline endpoint is available.
+
+Current AWQ candidate quality snapshot:
+
+| Evaluation | Items | OK | Failed | Score | p95 Latency |
+|---|---:|---:|---:|---:|---:|
+| MMLU | 14,042 | 14,039 | 3 | 0.8130 | 3.19s |
+| CMMLU | 11,582 | 11,582 | 0 | 0.8309 | 1.49s |
+| GSM8K | 1,319 | 1,319 | 0 | 0.8082 | 16.65s |
+| MT-Bench generation | 80 | 80 | 0 | pending judge | 31.13s |
+| LongBench 8K subset | 60 | 60 | 0 | 0.2038 | 16.03s |
+
+Baseline runbook for later:
+
+```bash
+python3 scripts/run_quality_eval.py \
+  --out runs/qwen72b-bf16-quality \
+  --base-url http://BASELINE_HOST:BASELINE_PORT/v1 \
+  --model qwen72b-bf16 \
+  --benchmarks mmlu cmmlu gsm8k \
+  --cmmlu-dir /path/to/cmmlu/test \
+  --concurrency 8
+
+python3 scripts/summarize_quality_retention.py \
+  --baseline-summary runs/qwen72b-bf16-quality/summary.json \
+  --candidate-summary runs/qwen72b-awq-quality/summary.json \
+  --out runs/qwen72b-awq-quality/quality_retention.json
+```
+
+Retention formula:
+
+```text
+quality_retention = candidate_score / baseline_score
+delta_percentage_points = 100 * (candidate_score - baseline_score)
+```
+
+Implemented support code:
+
+| Missing evidence | Implemented entry point | Notes |
+|---|---|---|
+| BF16/FP16 baseline retention | `scripts/run_quality_retention.py` | Runs the same benchmark set against baseline and candidate endpoints, then calls `scripts/summarize_quality_retention.py`. |
+| MT-Bench judge score | `scripts/score_mt_bench.py` | Supports single-answer scoring and pairwise baseline-vs-candidate judging with answer-order swapping. Requires an external judge endpoint/key. |
+| LongBench 8K quality | `scripts/run_longbench_8k.py` | Runs a documented LongBench subset against an 8K service; can optionally start a provided vLLM command. |
+| Runtime ablation | `scripts/run_ablation_matrix.py`, `examples/runtime_ablation.example.json` | Keeps workload constant while swapping vLLM, SGLang, and llama.cpp/GGUF endpoints. |
+| Quantization ablation | `scripts/run_ablation_matrix.py`, `examples/quant_ablation.example.json` | Keeps runtime/workload constant while swapping AWQ, GPTQ, and FP8 endpoints where available. |
 
 ## Energy
 
