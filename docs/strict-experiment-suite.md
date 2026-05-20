@@ -14,6 +14,30 @@ runtime, GGUF checkpoint, GPTQ checkpoint, or FP8 checkpoint is currently
 available on that host. Those missing prerequisites block the corresponding
 claims; they should not be inferred from the AWQ run.
 
+## BF16 Baseline And MT-Bench Judge Preflight
+
+Status: blocked as of `2026-05-20T12:39:37Z`.
+
+Remote preflight artifact:
+
+```text
+/home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/bf16-mtbench-preflight-20260520T123916Z
+```
+
+The host was checked for BF16/FP16 baseline and MT-Bench judge prerequisites:
+
+| Item | Status | Missing |
+|---|---|---|
+| BF16/FP16 baseline endpoint | blocked | `BASELINE_BASE_URL`, `BASELINE_MODEL`, external or multi-GPU Qwen2.5-72B BF16/FP16 endpoint |
+| MT-Bench judge endpoint | blocked | `JUDGE_BASE_URL`, `JUDGE_MODEL`, `JUDGE_API_KEY` |
+
+Only AWQ checkpoint directories are currently staged under `/home/hhai/models`.
+A local single-L20 BF16/FP16 72B baseline is not feasible because 72B BF16/FP16
+weights require roughly 144GB before KV cache and runtime overhead, while the
+host exposes about 46GB of L20 VRAM and about 63GB free disk. Running the AWQ
+candidate as its own judge is intentionally not reported, because that would not
+be an MT-Bench judge result and would contaminate the claim.
+
 ## Evidence Checklist
 
 | Evidence | Status | Entry Point | Blocking Condition |

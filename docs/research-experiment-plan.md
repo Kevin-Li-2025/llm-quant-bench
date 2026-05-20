@@ -103,6 +103,7 @@ Current execution status:
 - FP16/BF16 baseline: blocked on an external or multi-GPU endpoint. A single L20 cannot host Qwen2.5-72B FP16/BF16, so true baseline-vs-AWQ retention remains pending until a baseline endpoint is available.
 - Strict follow-up tooling: added readiness checks, LongBench v1 task-metric postprocessing, repeated load runs, and confidence-interval summaries. See [strict-experiment-suite.md](strict-experiment-suite.md).
 - Repeated fixed-shape CI: completed c1/c4/c8/c16 with 3 repeats each and 100% success. c16 averaged 127.22 +/- 12.68 output tok/s and matched the earlier 127.70 output tok/s screening result.
+- BF16 baseline and MT-Bench judge preflight: blocked as of 2026-05-20 because `BASELINE_BASE_URL`, `BASELINE_MODEL`, `JUDGE_BASE_URL`, `JUDGE_MODEL`, and `JUDGE_API_KEY` are not configured, and the host has only AWQ model directories under `/home/hhai/models`.
 
 Current AWQ candidate quality snapshot:
 
