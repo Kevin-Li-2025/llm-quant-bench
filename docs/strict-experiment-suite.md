@@ -21,7 +21,7 @@ claims; they should not be inferred from the AWQ run.
 | BF16/FP16 baseline vs AWQ retention | ready to run once baseline exists | `scripts/run_quality_retention.py` | needs matched BF16/FP16 endpoint |
 | MT-Bench judge score | ready to run once judge exists | `scripts/score_mt_bench.py` | needs judge endpoint/key, preferably GPT-4-class |
 | LongBench official-metric score | completed on the current 60-sample subset: 16.16% macro/micro | `scripts/score_longbench_official.py` | leaderboard claims still require exact official repo revision |
-| vLLM repeated load with CI | runnable on current AWQ endpoint | `scripts/run_repeated_load.py` | needs vLLM service running |
+| vLLM repeated load with CI | completed: c1/c4/c8/c16, 3 repeats each, 100% success | `scripts/run_repeated_load.py` | none for current AWQ/vLLM setup |
 | vLLM vs SGLang vs llama.cpp | scaffolded | `scripts/run_ablation_matrix.py` | needs SGLang, llama.cpp, and GGUF checkpoint |
 | AWQ vs GPTQ vs FP8 | scaffolded | `scripts/run_ablation_matrix.py` | needs GPTQ and FP8 checkpoints/endpoints |
 | Multi-run confidence intervals | runnable for any repeated summaries | `scripts/summarize_repeats_ci.py` | needs repeated runs per condition |
@@ -56,6 +56,15 @@ python3 scripts/run_repeated_load.py \
   --requests 80 \
   --stream-usage
 ```
+
+Current repeated-load result:
+
+| Concurrency | Runs | Success Rate | Output tok/s | p95 TTFT | p95 Latency |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 3 | 100% +/- 0.00% | 16.57 +/- 1.21 | 0.54s +/- 1.90s | 15.66s +/- 1.94s |
+| 4 | 3 | 100% +/- 0.00% | 55.75 +/- 3.54 | 3.01s +/- 0.17s | 18.70s +/- 0.16s |
+| 8 | 3 | 100% +/- 0.00% | 93.26 +/- 0.23 | 6.05s +/- 0.06s | 22.16s +/- 0.05s |
+| 16 | 3 | 100% +/- 0.00% | 127.22 +/- 12.68 | 11.91s +/- 0.15s | 34.95s +/- 1.00s |
 
 BF16/FP16 retention once a baseline endpoint is available:
 

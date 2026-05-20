@@ -116,6 +116,29 @@ This run is intended for fairer comparison with external serving benchmarks.
 
 The c10 row is the closest match to the GigaGPU 10-concurrent-user public table. The c16 fixed-shape run used 45.3 GB of the 46.1 GB visible VRAM during sampling, with about 97% GPU utilization. No CUDA OOM or request errors were observed in these runs. The c24 saturation run did not improve throughput over c16 and had much worse tail latency.
 
+## Repeated Fixed-Shape CI
+
+The fixed-shape c1/c4/c8/c16 conditions were repeated three times each after the
+initial screening runs.
+
+- Run directory: `/home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/repeated-fixed512x256-vllm-awq-20260520T120138Z`
+- Workload: same ~512 input / 256 output prompt set
+- Repeats: 3 per concurrency
+- CI method: two-sided 95% CI over run-level summaries using Student t critical values
+- Error check: zero vLLM log matches for CUDA OOM, OutOfMemory, Traceback, ERROR, or Killed
+
+| Concurrency | Runs | Success Rate | Output tok/s | Req/s | p95 TTFT | p95 Latency | p95 TPOT |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 3 | 100% +/- 0.00% | 16.57 +/- 1.21 | 0.065 +/- 0.005 | 0.54s +/- 1.90s | 15.66s +/- 1.94s | 0.059s +/- 0.000s |
+| 4 | 3 | 100% +/- 0.00% | 55.75 +/- 3.54 | 0.218 +/- 0.014 | 3.01s +/- 0.17s | 18.70s +/- 0.16s | 0.070s +/- 0.000s |
+| 8 | 3 | 100% +/- 0.00% | 93.26 +/- 0.23 | 0.364 +/- 0.001 | 6.05s +/- 0.06s | 22.16s +/- 0.05s | 0.082s +/- 0.000s |
+| 16 | 3 | 100% +/- 0.00% | 127.22 +/- 12.68 | 0.497 +/- 0.050 | 11.91s +/- 0.15s | 34.95s +/- 1.00s | 0.125s +/- 0.001s |
+
+The repeated c16 mean is essentially the same as the earlier single c16
+screening result, 127.22 versus 127.70 output tok/s. The c8 repeat is extremely
+tight, while the c16 output-throughput CI is wider because the third c16 run
+dropped to 121.32 output tok/s after two roughly 130 output tok/s runs.
+
 ## 24h Fixed-Shape Soak
 
 The c10 fixed-shape workload was run for 24 hours on the same vLLM service.

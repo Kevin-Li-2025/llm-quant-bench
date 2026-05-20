@@ -50,6 +50,19 @@ This table is closer to external serving benchmarks: unique prompts, average ser
 
 This benchmark uses `max_tokens=256`, `min_tokens=256`, and `ignore_eos=true` to make output length comparable across concurrency levels. The c10 row is the closest match to the GigaGPU 10-concurrent-user public table. The c24 run is included as a saturation check; it is slower than c16 and has much worse tail latency, so c16 is the best fixed-shape throughput point tested here.
 
+## Repeated Fixed-Shape CI
+
+The c1/c4/c8/c16 fixed-shape conditions were repeated three times each with the same ~512 input / 256 output workload. The table reports run-level means with two-sided 95% confidence intervals using Student t critical values.
+
+| Shape | Concurrency | Runs | Success Rate | Output tok/s | p95 TTFT | p95 Latency | p95 TPOT | OOM |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| ~512 in / 256 out | 1 | 3 | 100% +/- 0.00% | 16.57 +/- 1.21 | 0.54s +/- 1.90s | 15.66s +/- 1.94s | 0.059s +/- 0.000s | No |
+| ~512 in / 256 out | 4 | 3 | 100% +/- 0.00% | 55.75 +/- 3.54 | 3.01s +/- 0.17s | 18.70s +/- 0.16s | 0.070s +/- 0.000s | No |
+| ~512 in / 256 out | 8 | 3 | 100% +/- 0.00% | 93.26 +/- 0.23 | 6.05s +/- 0.06s | 22.16s +/- 0.05s | 0.082s +/- 0.000s | No |
+| ~512 in / 256 out | 16 | 3 | 100% +/- 0.00% | 127.22 +/- 12.68 | 11.91s +/- 0.15s | 34.95s +/- 1.00s | 0.125s +/- 0.001s | No |
+
+The repeated c16 mean, 127.22 output tok/s, matches the earlier single c16 screening result of 127.70 output tok/s. The c16 throughput interval is wider because one of the three runs produced 121.32 output tok/s, while the other two produced about 130 output tok/s. All twelve repeated runs completed without request failures or vLLM OOM/error signatures.
+
 ## 24h Fixed-Shape Soak
 
 The c10 fixed-shape workload was also run for a full day on the same service. Power was sampled every 10 seconds with `nvidia-smi`, so energy numbers are GPU board power estimates rather than wall-power measurements.

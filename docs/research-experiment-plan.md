@@ -102,6 +102,7 @@ Current execution status:
 - LongBench: 8K subset completed with 60/60 successful requests using `max_model_len=8192`; the reported score is lightweight max token-F1, not an official leaderboard score.
 - FP16/BF16 baseline: blocked on an external or multi-GPU endpoint. A single L20 cannot host Qwen2.5-72B FP16/BF16, so true baseline-vs-AWQ retention remains pending until a baseline endpoint is available.
 - Strict follow-up tooling: added readiness checks, LongBench v1 task-metric postprocessing, repeated load runs, and confidence-interval summaries. See [strict-experiment-suite.md](strict-experiment-suite.md).
+- Repeated fixed-shape CI: completed c1/c4/c8/c16 with 3 repeats each and 100% success. c16 averaged 127.22 +/- 12.68 output tok/s and matched the earlier 127.70 output tok/s screening result.
 
 Current AWQ candidate quality snapshot:
 
@@ -113,6 +114,15 @@ Current AWQ candidate quality snapshot:
 | MT-Bench generation | 80 | 80 | 0 | pending judge | 31.13s |
 | LongBench 8K subset | 60 | 60 | 0 | 0.2038 | 16.03s |
 | LongBench official-style metrics | 60 | 60 | 0 | 16.16% | n/a |
+
+Current repeated fixed-shape serving snapshot:
+
+| Concurrency | Runs | Success Rate | Output tok/s mean +/- 95% CI | p95 TTFT mean +/- 95% CI | p95 Latency mean +/- 95% CI |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 3 | 100% | 16.57 +/- 1.21 | 0.54s +/- 1.90s | 15.66s +/- 1.94s |
+| 4 | 3 | 100% | 55.75 +/- 3.54 | 3.01s +/- 0.17s | 18.70s +/- 0.16s |
+| 8 | 3 | 100% | 93.26 +/- 0.23 | 6.05s +/- 0.06s | 22.16s +/- 0.05s |
+| 16 | 3 | 100% | 127.22 +/- 12.68 | 11.91s +/- 0.15s | 34.95s +/- 1.00s |
 
 Baseline runbook for later:
 
