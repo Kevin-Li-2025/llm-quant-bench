@@ -117,6 +117,18 @@ samples. It is stricter than the earlier single token-F1 metric, but leaderboard
 claims still require the exact official LongBench repository revision, prompt
 templates, and full task set.
 
+Result from this stricter postprocess:
+
+| Task | Items | Metric | Score |
+|---|---:|---|---:|
+| multifieldqa_en | 10 | QA F1 | 38.67% |
+| hotpotqa | 10 | QA F1 | 30.53% |
+| multi_news | 10 | ROUGE-L | 12.90% |
+| gov_report | 10 | ROUGE-L | 12.08% |
+| lcc | 10 | code similarity | 2.76% |
+| passage_count | 10 | count | 0.00% |
+| Macro / micro | 60 | mixed LongBench v1 metrics | 16.16% |
+
 ## Retention Status
 
 BF16/FP16-vs-AWQ quality retention remains pending.

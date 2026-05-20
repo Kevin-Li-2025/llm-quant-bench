@@ -94,6 +94,7 @@ The first AWQ candidate quality pass completed on the same L20 setup. See [docs/
 | GSM8K | 1024 | 1,319 | 1,319 | 0 | 0.8082 | 16.65s | Final-number exact match. |
 | MT-Bench generation | 1024 | 80 | 80 | 0 | pending judge | 31.13s | Answer generation only; no external judge was available. |
 | LongBench subset | 8192 | 60 | 60 | 0 | 0.2038 | 16.03s | Lightweight max token-F1, not an official leaderboard score. |
+| LongBench official-style metrics | 8192 | 60 | 60 | 0 | 16.16% | n/a | LongBench v1 task-metric mapping over the same generated samples. |
 
 These are absolute AWQ candidate results. They are not BF16/FP16-vs-AWQ quality-retention results.
 

@@ -20,7 +20,7 @@ claims; they should not be inferred from the AWQ run.
 |---|---|---|---|
 | BF16/FP16 baseline vs AWQ retention | ready to run once baseline exists | `scripts/run_quality_retention.py` | needs matched BF16/FP16 endpoint |
 | MT-Bench judge score | ready to run once judge exists | `scripts/score_mt_bench.py` | needs judge endpoint/key, preferably GPT-4-class |
-| LongBench official-metric score | runnable from existing samples | `scripts/score_longbench_official.py` | leaderboard claims still require exact official repo revision |
+| LongBench official-metric score | completed on the current 60-sample subset: 16.16% macro/micro | `scripts/score_longbench_official.py` | leaderboard claims still require exact official repo revision |
 | vLLM repeated load with CI | runnable on current AWQ endpoint | `scripts/run_repeated_load.py` | needs vLLM service running |
 | vLLM vs SGLang vs llama.cpp | scaffolded | `scripts/run_ablation_matrix.py` | needs SGLang, llama.cpp, and GGUF checkpoint |
 | AWQ vs GPTQ vs FP8 | scaffolded | `scripts/run_ablation_matrix.py` | needs GPTQ and FP8 checkpoints/endpoints |

@@ -112,6 +112,7 @@ Current AWQ candidate quality snapshot:
 | GSM8K | 1,319 | 1,319 | 0 | 0.8082 | 16.65s |
 | MT-Bench generation | 80 | 80 | 0 | pending judge | 31.13s |
 | LongBench 8K subset | 60 | 60 | 0 | 0.2038 | 16.03s |
+| LongBench official-style metrics | 60 | 60 | 0 | 16.16% | n/a |
 
 Baseline runbook for later:
 
