@@ -240,7 +240,7 @@ Power sampling & \texttt{nvidia-smi}, approximately every 10 seconds \\
 The primary service command was:
 
 \begin{verbatim}
-vllm serve /home/hhai/models/Qwen2.5-72B-Instruct-AWQ \
+vllm serve /home/USER/models/Qwen2.5-72B-Instruct-AWQ \
   --host 0.0.0.0 --port 8001 \
   --served-model-name qwen72b-awq-l20 \
   --quantization awq_marlin \
@@ -489,7 +489,7 @@ preflight.}
 \end{table}
 
 The remote host currently stages only AWQ checkpoint directories under
-\texttt{/home/hhai/models}. A local 72B BF16/FP16 baseline is not feasible on
+\texttt{/home/USER/models}. A local 72B BF16/FP16 baseline is not feasible on
 one L20: 72B BF16/FP16 weights require roughly 144GB before KV cache and runtime
 overhead, while the host exposes about 46GB of GPU memory and about 63GB of
 free disk. We also intentionally avoid judging MT-Bench with the AWQ candidate
@@ -653,16 +653,16 @@ Key remote artifact paths:
 
 \begin{itemize}
   \item 24h soak:
-        \texttt{/home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/}\\
+        \texttt{/home/USER/llm-quant-bench/runs/qwen72b-awq-l20/}\\
         \texttt{soak-24h-fixed512x256-c10-20260519T034856Z}
   \item Repeated fixed-shape CI:
-        \texttt{/home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/}\\
+        \texttt{/home/USER/llm-quant-bench/runs/qwen72b-awq-l20/}\\
         \texttt{repeated-fixed512x256-vllm-awq-20260520T120138Z}
   \item Quality evaluation:
-        \texttt{/home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/}\\
+        \texttt{/home/USER/llm-quant-bench/runs/qwen72b-awq-l20/}\\
         \texttt{quality-eval-20260520T084323Z}
   \item BF16/MT-Bench preflight:
-        \texttt{/home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/}\\
+        \texttt{/home/USER/llm-quant-bench/runs/qwen72b-awq-l20/}\\
         \texttt{bf16-mtbench-preflight-20260520T123916Z}
 \end{itemize}
 

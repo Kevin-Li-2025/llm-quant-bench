@@ -7,7 +7,7 @@ claims about single-L20 70B serving.
 
 The current L20 host has only the AWQ checkpoint staged:
 
-- `/home/hhai/models/Qwen2.5-72B-Instruct-AWQ`
+- `/home/USER/models/Qwen2.5-72B-Instruct-AWQ`
 
 No BF16/FP16 baseline endpoint, judge endpoint, SGLang runtime, llama.cpp
 runtime, GGUF checkpoint, GPTQ checkpoint, or FP8 checkpoint is currently
@@ -21,7 +21,7 @@ Status: blocked as of `2026-05-20T12:39:37Z`.
 Remote preflight artifact:
 
 ```text
-/home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/bf16-mtbench-preflight-20260520T123916Z
+/home/USER/llm-quant-bench/runs/qwen72b-awq-l20/bf16-mtbench-preflight-20260520T123916Z
 ```
 
 The host was checked for BF16/FP16 baseline and MT-Bench judge prerequisites:
@@ -31,7 +31,7 @@ The host was checked for BF16/FP16 baseline and MT-Bench judge prerequisites:
 | BF16/FP16 baseline endpoint | blocked | `BASELINE_BASE_URL`, `BASELINE_MODEL`, external or multi-GPU Qwen2.5-72B BF16/FP16 endpoint |
 | MT-Bench judge endpoint | blocked | `JUDGE_BASE_URL`, `JUDGE_MODEL`, `JUDGE_API_KEY` |
 
-Only AWQ checkpoint directories are currently staged under `/home/hhai/models`.
+Only AWQ checkpoint directories are currently staged under `/home/USER/models`.
 A local single-L20 BF16/FP16 72B baseline is not feasible because 72B BF16/FP16
 weights require roughly 144GB before KV cache and runtime overhead, while the
 host exposes about 46GB of L20 VRAM and about 63GB free disk. Running the AWQ
@@ -100,7 +100,7 @@ python3 scripts/run_quality_retention.py \
   --candidate-base-url http://127.0.0.1:8001/v1 \
   --candidate-model qwen72b-awq-l20 \
   --benchmarks mmlu cmmlu gsm8k \
-  --cmmlu-dir /home/hhai/quality-eval-data/cmmlu/test \
+  --cmmlu-dir /home/USER/quality-eval-data/cmmlu/test \
   --concurrency 8
 ```
 

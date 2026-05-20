@@ -157,7 +157,7 @@ The repo now includes executable scaffolding for the missing research pieces:
 Current BF16 baseline and MT-Bench judge status: blocked. The latest preflight
 found no `BASELINE_BASE_URL`, `BASELINE_MODEL`, `JUDGE_BASE_URL`, `JUDGE_MODEL`,
 or `JUDGE_API_KEY`, and the remote L20 host currently has only AWQ checkpoint
-directories under `/home/hhai/models`. A local 72B BF16/FP16 baseline is not
+directories under `/home/USER/models`. A local 72B BF16/FP16 baseline is not
 feasible on one L20 because the weights alone require roughly 144GB before KV
 cache and runtime overhead.
 

@@ -6,7 +6,7 @@ This document tracks the experiments needed for a credible technical report on s
 
 Status: completed.
 
-- Run directory: `/home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/soak-24h-fixed512x256-c10-20260519T034856Z`
+- Run directory: `/home/USER/llm-quant-bench/runs/qwen72b-awq-l20/soak-24h-fixed512x256-c10-20260519T034856Z`
 - Model: `Qwen/Qwen2.5-72B-Instruct-AWQ`
 - Runtime: vLLM `0.8.5.post1`
 - GPU: 1x NVIDIA L20
@@ -22,9 +22,9 @@ Energy was computed with:
 
 ```bash
 python3 scripts/summarize_energy.py \
-  --summary /home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/soak-24h-fixed512x256-c10-20260519T034856Z/load/load_summary.json \
-  --power-log /home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/soak-24h-fixed512x256-c10-20260519T034856Z/gpu_power.csv \
-  --out /home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/soak-24h-fixed512x256-c10-20260519T034856Z/energy_summary.json
+  --summary /home/USER/llm-quant-bench/runs/qwen72b-awq-l20/soak-24h-fixed512x256-c10-20260519T034856Z/load/load_summary.json \
+  --power-log /home/USER/llm-quant-bench/runs/qwen72b-awq-l20/soak-24h-fixed512x256-c10-20260519T034856Z/gpu_power.csv \
+  --out /home/USER/llm-quant-bench/runs/qwen72b-awq-l20/soak-24h-fixed512x256-c10-20260519T034856Z/energy_summary.json
 ```
 
 Result:
@@ -103,7 +103,7 @@ Current execution status:
 - FP16/BF16 baseline: blocked on an external or multi-GPU endpoint. A single L20 cannot host Qwen2.5-72B FP16/BF16, so true baseline-vs-AWQ retention remains pending until a baseline endpoint is available.
 - Strict follow-up tooling: added readiness checks, LongBench v1 task-metric postprocessing, repeated load runs, and confidence-interval summaries. See [strict-experiment-suite.md](strict-experiment-suite.md).
 - Repeated fixed-shape CI: completed c1/c4/c8/c16 with 3 repeats each and 100% success. c16 averaged 127.22 +/- 12.68 output tok/s and matched the earlier 127.70 output tok/s screening result.
-- BF16 baseline and MT-Bench judge preflight: blocked as of 2026-05-20 because `BASELINE_BASE_URL`, `BASELINE_MODEL`, `JUDGE_BASE_URL`, `JUDGE_MODEL`, and `JUDGE_API_KEY` are not configured, and the host has only AWQ model directories under `/home/hhai/models`.
+- BF16 baseline and MT-Bench judge preflight: blocked as of 2026-05-20 because `BASELINE_BASE_URL`, `BASELINE_MODEL`, `JUDGE_BASE_URL`, `JUDGE_MODEL`, and `JUDGE_API_KEY` are not configured, and the host has only AWQ model directories under `/home/USER/models`.
 
 Current AWQ candidate quality snapshot:
 

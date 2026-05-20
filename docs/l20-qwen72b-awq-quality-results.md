@@ -19,7 +19,7 @@ These results are AWQ candidate absolute scores. They are not BF16/FP16-vs-AWQ r
 Run directory:
 
 ```text
-/home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/quality-eval-20260520T084323Z/current-awq-short-quality
+/home/USER/llm-quant-bench/runs/qwen72b-awq-l20/quality-eval-20260520T084323Z/current-awq-short-quality
 ```
 
 Command shape:
@@ -30,7 +30,7 @@ python scripts/run_quality_eval.py \
   --base-url http://127.0.0.1:8001/v1 \
   --model qwen72b-awq-l20 \
   --benchmarks mmlu cmmlu gsm8k \
-  --cmmlu-dir /home/hhai/hf-cache-l20-eval/cmmlu_data2/test \
+  --cmmlu-dir /home/USER/hf-cache-l20-eval/cmmlu_data2/test \
   --concurrency 8
 ```
 
@@ -56,7 +56,7 @@ Method notes:
 Run directory:
 
 ```text
-/home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/quality-eval-20260520T084323Z/current-mt-bench-generation
+/home/USER/llm-quant-bench/runs/qwen72b-awq-l20/quality-eval-20260520T084323Z/current-mt-bench-generation
 ```
 
 Results:
@@ -72,7 +72,7 @@ This run only generated answers. Official MT-Bench scoring requires a judge endp
 Run directory:
 
 ```text
-/home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/quality-eval-20260520T084323Z/current-longbench-8k
+/home/USER/llm-quant-bench/runs/qwen72b-awq-l20/quality-eval-20260520T084323Z/current-longbench-8k
 ```
 
 Command shape:
@@ -82,7 +82,7 @@ python scripts/run_longbench_8k.py \
   --out "$OUT" \
   --base-url http://127.0.0.1:8001/v1 \
   --model qwen72b-awq-l20 \
-  --longbench-dir /home/hhai/hf-cache-l20-eval/longbench_data/data \
+  --longbench-dir /home/USER/hf-cache-l20-eval/longbench_data/data \
   --tasks multifieldqa_en hotpotqa passage_count lcc gov_report multi_news \
   --max-per-task 10 \
   --concurrency 1 \
@@ -108,8 +108,8 @@ The repo now includes a stricter postprocess step:
 
 ```bash
 python3 scripts/score_longbench_official.py \
-  --samples /home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/quality-eval-20260520T084323Z/current-longbench-8k/eval/samples.jsonl \
-  --out /home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/quality-eval-20260520T084323Z/current-longbench-8k/official-metrics
+  --samples /home/USER/llm-quant-bench/runs/qwen72b-awq-l20/quality-eval-20260520T084323Z/current-longbench-8k/eval/samples.jsonl \
+  --out /home/USER/llm-quant-bench/runs/qwen72b-awq-l20/quality-eval-20260520T084323Z/current-longbench-8k/official-metrics
 ```
 
 This applies the LongBench v1 task-specific metric mapping to the generated

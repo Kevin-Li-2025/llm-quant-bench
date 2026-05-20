@@ -71,7 +71,7 @@ OOM: no CUDA OOM found in the vLLM log
 ## Best Throughput Configuration
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 vllm serve /home/hhai/models/Qwen2.5-72B-Instruct-AWQ \
+CUDA_VISIBLE_DEVICES=0 vllm serve /home/USER/models/Qwen2.5-72B-Instruct-AWQ \
   --host 0.0.0.0 --port 8001 \
   --served-model-name qwen72b-awq-l20 \
   --quantization awq_marlin \
@@ -121,7 +121,7 @@ The c10 row is the closest match to the GigaGPU 10-concurrent-user public table.
 The fixed-shape c1/c4/c8/c16 conditions were repeated three times each after the
 initial screening runs.
 
-- Run directory: `/home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/repeated-fixed512x256-vllm-awq-20260520T120138Z`
+- Run directory: `/home/USER/llm-quant-bench/runs/qwen72b-awq-l20/repeated-fixed512x256-vllm-awq-20260520T120138Z`
 - Workload: same ~512 input / 256 output prompt set
 - Repeats: 3 per concurrency
 - CI method: two-sided 95% CI over run-level summaries using Student t critical values
@@ -143,7 +143,7 @@ dropped to 121.32 output tok/s after two roughly 130 output tok/s runs.
 
 The c10 fixed-shape workload was run for 24 hours on the same vLLM service.
 
-- Run directory: `/home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/soak-24h-fixed512x256-c10-20260519T034856Z`
+- Run directory: `/home/USER/llm-quant-bench/runs/qwen72b-awq-l20/soak-24h-fixed512x256-c10-20260519T034856Z`
 - Load summary: `load/load_summary.json`
 - Power summary: `energy_summary.json`
 - Power samples: 8,618 samples at approximately 10-second intervals
