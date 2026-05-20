@@ -4,7 +4,7 @@ This document tracks the experiments needed for a credible technical report on s
 
 ## Current 24h Soak
 
-Status: started.
+Status: completed.
 
 - Run directory: `/home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/soak-24h-fixed512x256-c10-20260519T034856Z`
 - Model: `Qwen/Qwen2.5-72B-Instruct-AWQ`
@@ -16,8 +16,9 @@ Status: started.
 - Duration: 86,400 seconds
 - Load output: `load/load_summary.json`
 - Power log: `gpu_power.csv`
+- Energy output: `energy_summary.json`
 
-After completion, compute energy with:
+Energy was computed with:
 
 ```bash
 python3 scripts/summarize_energy.py \
@@ -26,19 +27,27 @@ python3 scripts/summarize_energy.py \
   --out /home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/soak-24h-fixed512x256-c10-20260519T034856Z/energy_summary.json
 ```
 
-Report:
+Result:
 
-- total requests
-- success rate
-- failed requests and error classes
-- output tokens/s
-- p95 TTFT
-- p95 latency
-- average GPU power
-- energy Wh
-- output tokens/J
-- total tokens/J
-- CUDA OOM count from vLLM logs
+| Metric | Value |
+|---|---:|
+| Duration | 86,412.60s |
+| Total requests | 36,740 |
+| Successful requests | 36,740 |
+| Failed requests | 0 |
+| Success rate | 100% |
+| Output tokens/s | 108.84 |
+| Request throughput | 0.425 req/s |
+| p95 TTFT | 6.61s |
+| p95 latency | 23.54s |
+| Prompt tokens | 19,361,980 |
+| Output tokens | 9,405,440 |
+| Total tokens | 28,767,420 |
+| Average GPU power | 330.15 W |
+| GPU energy | 7.92 kWh |
+| Output tokens/J | 0.330 |
+| Total tokens/J | 1.008 |
+| CUDA OOM / error signatures | 0 |
 
 ## Quality Retention
 
@@ -126,7 +135,7 @@ This should be written as a systems benchmark or empirical technical report, not
 Claim that is supported:
 
 ```text
-Single-L20 serving of Qwen2.5-72B AWQ is feasible, measurable, and stable under fixed-shape load, with c10 reaching 108.70 output tok/s and c16 reaching 127.70 output tok/s for ~512 input / 256 output.
+Single-L20 serving of Qwen2.5-72B AWQ is feasible, measurable, and stable under fixed-shape load, with c10 sustaining 108.84 output tok/s for 24 hours and c16 reaching 127.70 output tok/s in the short fixed-shape sweep for ~512 input / 256 output.
 ```
 
 Claims that are not yet supported:
@@ -134,4 +143,4 @@ Claims that are not yet supported:
 - lossless quality
 - superiority over A100/H100
 - generalization to all 70B models
-- production SLA without 24h soak completion
+- production SLA beyond the tested fixed-shape workload

@@ -20,6 +20,7 @@ The main throughput sweep is a short-context configuration. Separate 4096-contex
 |---|---|---|---:|---:|---:|---:|---:|---|
 | Qwen2.5-72B-Instruct | Q4 AWQ / AWQ Marlin | L20 48GB (46GB usable) | 8192 | 1 | 100% (3/3) | 11.03s | 6.16 output tok/s | No |
 | Qwen2.5-72B-Instruct | Q4 AWQ / AWQ Marlin | L20 48GB (46GB usable) | 4096 | 1 | 100% (5/5) | 5.28s | 10.02 output tok/s | No |
+| Qwen2.5-72B-Instruct | Q4 AWQ / AWQ Marlin | L20 48GB (46GB usable) | 1024 | 10 | 100% (36740/36740) | 6.61s | 108.84 output tok/s | No |
 | Qwen2.5-72B-Instruct | Q4 AWQ / AWQ Marlin | L20 48GB (46GB usable) | 1024 | 16 | 100% (1177/1177) | 0.14s | 245.91 output tok/s | No |
 | Qwen2.5-72B-Instruct | Q4 AWQ / AWQ Marlin | L20 48GB (46GB usable) | 1024 | 32 | 100% (408/408) | 2.17s | 390.08 output tok/s | No |
 | Qwen2.5-72B-Instruct | Q4 AWQ / AWQ Marlin | L20 48GB (46GB usable) | 1024 | 48 | 100% (2333/2333) | 0.24s | 488.63 output tok/s | No |
@@ -115,6 +116,34 @@ This run is intended for fairer comparison with external serving benchmarks.
 
 The c10 row is the closest match to the GigaGPU 10-concurrent-user public table. The c16 fixed-shape run used 45.3 GB of the 46.1 GB visible VRAM during sampling, with about 97% GPU utilization. No CUDA OOM or request errors were observed in these runs. The c24 saturation run did not improve throughput over c16 and had much worse tail latency.
 
+## 24h Fixed-Shape Soak
+
+The c10 fixed-shape workload was run for 24 hours on the same vLLM service.
+
+- Run directory: `/home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/soak-24h-fixed512x256-c10-20260519T034856Z`
+- Load summary: `load/load_summary.json`
+- Power summary: `energy_summary.json`
+- Power samples: 8,618 samples at approximately 10-second intervals
+- Power measurement scope: GPU board power from `nvidia-smi`, not full-system wall power
+- Error check: zero vLLM log matches for CUDA OOM, OutOfMemory, Traceback, ERROR, or Killed
+
+| Shape | Concurrency | Duration | Requests | Success Rate | p95 TTFT | p95 Latency | Output tok/s | Req/s | p05 Decode tok/s | OOM |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| ~512 in / 256 out | 10 | 24.00h | 36740 | 100% | 6.61s | 23.54s | 108.84 | 0.425 | 11.26 | No |
+
+| Metric | Value |
+|---|---:|
+| Prompt tokens | 19,361,980 |
+| Output tokens | 9,405,440 |
+| Total tokens | 28,767,420 |
+| Average GPU power | 330.15 W |
+| GPU energy | 7.92 kWh |
+| Output tokens per joule | 0.330 |
+| Total tokens per joule | 1.008 |
+| Joules per output token | 3.033 |
+
+The day-long run closely matched the short c10 fixed-shape screening run: 108.84 output tok/s over 24 hours versus 108.70 output tok/s in the short run. This is the strongest stability result in the current repo.
+
 ## External Comparisons
 
 These comparisons are directional because serving throughput depends on hardware, prompt length, output length, concurrency, batching, kernels, and sampling settings.
@@ -123,6 +152,7 @@ These comparisons are directional because serving throughput depends on hardware
 |---|---|---|---|---:|---|
 | This repo | 1x L20 48GB | Qwen2.5-72B AWQ Marlin | ~512 input / 256 output, c8 | 93.38 output tok/s | Fixed-shape aggregate throughput, 64/64 success. |
 | This repo | 1x L20 48GB | Qwen2.5-72B AWQ Marlin | ~512 input / 256 output, c10 | 108.70 output tok/s | Closest local match to 10-concurrent-user public tables. |
+| This repo | 1x L20 48GB | Qwen2.5-72B AWQ Marlin | ~512 input / 256 output, c10, 24h soak | 108.84 output tok/s | Sustained result with 36,740/36,740 successful requests. |
 | This repo | 1x L20 48GB | Qwen2.5-72B AWQ Marlin | ~512 input / 256 output, c16 | 127.70 output tok/s | Higher throughput, 128/128 success, p95 latency 36.29s. |
 | [GigaGPU Apr 2026](https://gigagpu.com/tokens-sec-benchmark-update-april-2026/) | 1x RTX 3090 | Qwen 2.5 72B Q4 | 512 input / 256 output, 10 concurrent users | 32 tok/s | Similar fixed-shape public table. |
 | [GigaGPU Apr 2026](https://gigagpu.com/tokens-sec-benchmark-update-april-2026/) | 1x RTX 5090 | Qwen 2.5 72B Q4 | 512 input / 256 output, 10 concurrent users | 58-82 tok/s | This L20 run is above that published 5090 range. |
@@ -131,7 +161,7 @@ These comparisons are directional because serving throughput depends on hardware
 | [Qwen official speed benchmark](https://qwen.readthedocs.io/en/v2.5/benchmark/speed_benchmark.html) | 2x A100 80GB | Qwen2.5-72B AWQ, vLLM | input 1 / 6144 / 14336 / 30720, 2048 output, batch size 1 | 44.30 / 40.67 / 36.63 / 30.02 tok/s | Official vLLM baseline uses 2 A100s and batch size 1. |
 | [NVIDIA NIM supported models](https://docs.nvidia.com/nim/large-language-models/1.14.0/supported-models.html) | L20 | Qwen2.5 72B Instruct FP8 | Optimized profiles | 4 or 8 GPUs | NVIDIA's optimized L20 profile is multi-GPU; this run demonstrates a single-L20 AWQ path. |
 
-Bottom line: the fixed-shape c8/c16 numbers are strong versus public single-GPU Q4 tables, but they should be described as aggregate serving throughput, not single-request speed. The long-context c1 rows are capacity and stability evidence. None of these results prove lossless quality retention.
+Bottom line: the fixed-shape c8/c16 numbers are strong versus public single-GPU Q4 tables, and the c10 24h soak shows day-long sustained serving stability. These should be described as aggregate serving throughput, not single-request speed. The long-context c1 rows are capacity evidence. None of these results prove lossless quality retention.
 
 ## Load Test Command
 

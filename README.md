@@ -27,12 +27,13 @@ These are measured runs for `Qwen/Qwen2.5-72B-Instruct-AWQ` on one NVIDIA L20. T
 |---|---|---|---:|---:|---:|---:|---:|---|
 | Qwen2.5-72B-Instruct | Q4 AWQ / AWQ Marlin | L20 48GB (46GB usable) | 8192 | 1 | 100% (3/3) | 11.03s | 6.16 output tok/s | No |
 | Qwen2.5-72B-Instruct | Q4 AWQ / AWQ Marlin | L20 48GB (46GB usable) | 4096 | 1 | 100% (5/5) | 5.28s | 10.02 output tok/s | No |
+| Qwen2.5-72B-Instruct | Q4 AWQ / AWQ Marlin | L20 48GB (46GB usable) | 1024 | 10 | 100% (36740/36740) | 6.61s | 108.84 output tok/s | No |
 | Qwen2.5-72B-Instruct | Q4 AWQ / AWQ Marlin | L20 48GB (46GB usable) | 1024 | 16 | 100% (1177/1177) | 0.14s | 245.91 output tok/s | No |
 | Qwen2.5-72B-Instruct | Q4 AWQ / AWQ Marlin | L20 48GB (46GB usable) | 1024 | 32 | 100% (408/408) | 2.17s | 390.08 output tok/s | No |
 | Qwen2.5-72B-Instruct | Q4 AWQ / AWQ Marlin | L20 48GB (46GB usable) | 1024 | 48 | 100% (2333/2333) | 0.24s | 488.63 output tok/s | No |
 | Qwen2.5-72B-Instruct | Q4 AWQ / AWQ Marlin | L20 48GB (46GB usable) | 1024 | 64 | 100% (461/461) | 3.39s | 432.63 output tok/s | No |
 
-The 8192-context row used a 7,514-token prompt. The 4096-context row used a 3,875-token prompt. The 1024-context rows are short-context throughput sweeps; `c48` was the best tested throughput point, while `c64` was past the useful concurrency peak. See [docs/l20-qwen72b-awq-results.md](docs/l20-qwen72b-awq-results.md) for the full run notes.
+The 8192-context row used a 7,514-token prompt. The 4096-context row used a 3,875-token prompt. The 1024/c10 row is a 24h fixed-shape soak. The other 1024-context rows are short-context throughput sweeps; `c48` was the best tested throughput point, while `c64` was past the useful concurrency peak. See [docs/l20-qwen72b-awq-results.md](docs/l20-qwen72b-awq-results.md) for the full run notes.
 
 ## Fixed-Shape Serving Benchmark
 
@@ -49,6 +50,16 @@ This table is closer to external serving benchmarks: unique prompts, average ser
 
 This benchmark uses `max_tokens=256`, `min_tokens=256`, and `ignore_eos=true` to make output length comparable across concurrency levels. The c10 row is the closest match to the GigaGPU 10-concurrent-user public table. The c24 run is included as a saturation check; it is slower than c16 and has much worse tail latency, so c16 is the best fixed-shape throughput point tested here.
 
+## 24h Fixed-Shape Soak
+
+The c10 fixed-shape workload was also run for a full day on the same service. Power was sampled every 10 seconds with `nvidia-smi`, so energy numbers are GPU board power estimates rather than wall-power measurements.
+
+| Shape | Concurrency | Duration | Requests | Success Rate | p95 TTFT | p95 Latency | Output tok/s | Req/s | Avg GPU Power | GPU Energy | Output tok/J | Total tok/J | OOM |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| ~512 in / 256 out | 10 | 24.00h | 36740 | 100% | 6.61s | 23.54s | 108.84 | 0.425 | 330.15 W | 7.92 kWh | 0.330 | 1.008 | No |
+
+The 24h run generated 9,405,440 output tokens and 28,767,420 total tokens with zero request failures. The vLLM log had no CUDA OOM, traceback, killed-process, or error signatures for this run.
+
 ## External Comparisons
 
 These comparisons are directional. Serving benchmarks are sensitive to prompt length, output length, concurrency, batching policy, quantization kernel, sampling settings, and whether the number is per-request decode speed or aggregate server throughput.
@@ -57,6 +68,7 @@ These comparisons are directional. Serving benchmarks are sensitive to prompt le
 |---|---|---|---|---:|---|
 | This repo | 1x L20 48GB | Qwen2.5-72B AWQ Marlin | ~512 input / 256 output, c8 | 93.38 output tok/s | Fixed-shape aggregate throughput with 100% success. |
 | This repo | 1x L20 48GB | Qwen2.5-72B AWQ Marlin | ~512 input / 256 output, c10 | 108.70 output tok/s | Closest local match to 10-concurrent-user public tables. |
+| This repo | 1x L20 48GB | Qwen2.5-72B AWQ Marlin | ~512 input / 256 output, c10, 24h soak | 108.84 output tok/s | Day-long sustained throughput with 36,740/36,740 successful requests. |
 | This repo | 1x L20 48GB | Qwen2.5-72B AWQ Marlin | ~512 input / 256 output, c16 | 127.70 output tok/s | Higher throughput, but p95 latency rises to 36.29s. |
 | [GigaGPU Apr 2026](https://gigagpu.com/tokens-sec-benchmark-update-april-2026/) | 1x RTX 3090 | Qwen 2.5 72B Q4 | 512 input / 256 output, 10 concurrent users | 32 tok/s | Similar fixed-shape benchmark, different GPU and quant/runtime details. |
 | [GigaGPU Apr 2026](https://gigagpu.com/tokens-sec-benchmark-update-april-2026/) | 1x RTX 5090 | Qwen 2.5 72B Q4 | 512 input / 256 output, 10 concurrent users | 58-82 tok/s | This L20 run is above the published 5090 range for that table. |
@@ -65,11 +77,11 @@ These comparisons are directional. Serving benchmarks are sensitive to prompt le
 | [Qwen official speed benchmark](https://qwen.readthedocs.io/en/v2.5/benchmark/speed_benchmark.html) | 2x A100 80GB | Qwen2.5-72B AWQ, vLLM | input 1 / 6144 / 14336 / 30720, 2048 output, batch size 1 | 44.30 / 40.67 / 36.63 / 30.02 tok/s | Official vLLM baseline uses 2 A100s and batch size 1, so it should not be compared directly with c16 aggregate throughput. |
 | [NVIDIA NIM supported models](https://docs.nvidia.com/nim/large-language-models/1.14.0/supported-models.html) | L20 | Qwen2.5 72B Instruct FP8 | Optimized profiles | 4 or 8 GPUs | NVIDIA's optimized L20 profiles are multi-GPU; this repo demonstrates a single-L20 AWQ path outside that conservative profile. |
 
-The practical interpretation is that single-L20 Qwen2.5-72B AWQ serving is feasible and measurable. The fixed-shape c8/c16 results are strong versus public single-GPU Q4 serving tables, while the long-context c1 rows are mainly capacity and stability evidence. These numbers are not quality-retention evidence and should not be described as lossless.
+The practical interpretation is that single-L20 Qwen2.5-72B AWQ serving is feasible, measurable, and stable for at least a day under this fixed-shape workload. The fixed-shape c8/c16 results are strong versus public single-GPU Q4 serving tables, while the long-context c1 rows are mainly capacity evidence. These numbers are not quality-retention evidence and should not be described as lossless.
 
 ## Research Follow-Up
 
-A 24h fixed-shape c10 soak test is running with GPU power logging. The follow-up plan for quality retention, energy, additional 70B models, additional runtimes, and AWQ/GPTQ/FP8 ablations is tracked in [docs/research-experiment-plan.md](docs/research-experiment-plan.md).
+The 24h fixed-shape c10 soak test completed with GPU power logging and zero request failures. The follow-up plan for quality retention, additional 70B models, additional runtimes, and AWQ/GPTQ/FP8 ablations is tracked in [docs/research-experiment-plan.md](docs/research-experiment-plan.md).
 
 Recommended external benchmarks to add:
 
