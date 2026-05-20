@@ -101,6 +101,7 @@ Current execution status:
 - MT-Bench: 80/80 answer generations completed; official scoring still requires an external judge endpoint/key and answer-order-swapped judging.
 - LongBench: 8K subset completed with 60/60 successful requests using `max_model_len=8192`; the reported score is lightweight max token-F1, not an official leaderboard score.
 - FP16/BF16 baseline: blocked on an external or multi-GPU endpoint. A single L20 cannot host Qwen2.5-72B FP16/BF16, so true baseline-vs-AWQ retention remains pending until a baseline endpoint is available.
+- Strict follow-up tooling: added readiness checks, LongBench v1 task-metric postprocessing, repeated load runs, and confidence-interval summaries. See [strict-experiment-suite.md](strict-experiment-suite.md).
 
 Current AWQ candidate quality snapshot:
 
@@ -143,8 +144,11 @@ Implemented support code:
 | BF16/FP16 baseline retention | `scripts/run_quality_retention.py` | Runs the same benchmark set against baseline and candidate endpoints, then calls `scripts/summarize_quality_retention.py`. |
 | MT-Bench judge score | `scripts/score_mt_bench.py` | Supports single-answer scoring and pairwise baseline-vs-candidate judging with answer-order swapping. Requires an external judge endpoint/key. |
 | LongBench 8K quality | `scripts/run_longbench_8k.py` | Runs a documented LongBench subset against an 8K service; can optionally start a provided vLLM command. |
+| LongBench official-style metrics | `scripts/score_longbench_official.py` | Applies LongBench v1 task-specific metric mapping to generated samples. Use the exact official repo revision for leaderboard claims. |
 | Runtime ablation | `scripts/run_ablation_matrix.py`, `examples/runtime_ablation.example.json` | Keeps workload constant while swapping vLLM, SGLang, and llama.cpp/GGUF endpoints. |
 | Quantization ablation | `scripts/run_ablation_matrix.py`, `examples/quant_ablation.example.json` | Keeps runtime/workload constant while swapping AWQ, GPTQ, and FP8 endpoints where available. |
+| Repeated runs and confidence intervals | `scripts/run_repeated_load.py`, `scripts/summarize_repeats_ci.py` | Runs repeated fixed-shape conditions and reports run-level mean, standard deviation, and two-sided 95% CI. |
+| Matrix readiness | `scripts/check_experiment_readiness.py`, `examples/full_research_matrix.example.json` | Checks missing runtimes, model paths, and required endpoint environment variables before launching expensive jobs. |
 
 ## Energy
 

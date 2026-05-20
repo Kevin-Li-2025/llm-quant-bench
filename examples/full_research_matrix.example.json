@@ -1,0 +1,112 @@
+{
+  "description": "End-state experiment matrix for publishable L20 70B evidence. This is a template; run check_experiment_readiness.py before execution.",
+  "experiments": [
+    {
+      "name": "bf16-baseline-quality",
+      "runtime": "external-or-multi-gpu",
+      "quant": "BF16/FP16",
+      "requires": {
+        "env": ["BASELINE_BASE_URL", "BASELINE_MODEL"]
+      },
+      "model": {
+        "name": "qwen72b-bf16-baseline",
+        "base_url": "${BASELINE_BASE_URL}",
+        "model": "${BASELINE_MODEL}",
+        "temperature": 0,
+        "max_tokens": 256
+      },
+      "quality": {
+        "benchmarks": ["mmlu", "cmmlu", "gsm8k"],
+        "cmmlu_dir": "/home/hhai/quality-eval-data/cmmlu/test",
+        "concurrency": 8
+      }
+    },
+    {
+      "name": "awq-candidate-quality",
+      "runtime": "vLLM",
+      "quant": "AWQ Marlin",
+      "requires": {
+        "commands": ["/home/hhai/vllm-l20-exp/bin/vllm"],
+        "paths": ["/home/hhai/models/Qwen2.5-72B-Instruct-AWQ"]
+      },
+      "serve_command": [
+        "bash",
+        "-lc",
+        "/home/hhai/vllm-l20-exp/bin/vllm serve /home/hhai/models/Qwen2.5-72B-Instruct-AWQ --host 0.0.0.0 --port 8001 --served-model-name qwen72b-awq-l20 --quantization awq_marlin --dtype half --max-model-len 1024 --max-num-seqs 48 --max-num-batched-tokens 4096 --trust-remote-code"
+      ],
+      "health_url": "http://127.0.0.1:8001/v1/models",
+      "model": {
+        "name": "qwen72b-awq-l20",
+        "base_url": "http://127.0.0.1:8001/v1",
+        "model": "qwen72b-awq-l20",
+        "temperature": 0,
+        "max_tokens": 256,
+        "extra_body": {
+          "min_tokens": 256,
+          "ignore_eos": true
+        }
+      },
+      "load": {
+        "dataset": "/home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/fixed-512in-256out.jsonl",
+        "concurrency": 10,
+        "requests": 80,
+        "stream": true,
+        "stream_usage": true
+      }
+    },
+    {
+      "name": "mt-bench-gpt4-judge",
+      "runtime": "judge-endpoint",
+      "quant": "n/a",
+      "requires": {
+        "env": ["JUDGE_BASE_URL", "JUDGE_MODEL", "JUDGE_API_KEY"]
+      }
+    },
+    {
+      "name": "longbench-v1-official-metrics",
+      "runtime": "postprocess",
+      "quant": "AWQ Marlin",
+      "requires": {
+        "paths": [
+          "/home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/quality-eval-20260520T084323Z/current-longbench-8k/eval/samples.jsonl"
+        ]
+      }
+    },
+    {
+      "name": "qwen72b-awq-sglang",
+      "runtime": "SGLang",
+      "quant": "AWQ",
+      "requires": {
+        "python_modules": ["sglang"],
+        "paths": ["/home/hhai/models/Qwen2.5-72B-Instruct-AWQ"]
+      }
+    },
+    {
+      "name": "qwen72b-q4-llama-cpp",
+      "runtime": "llama.cpp",
+      "quant": "GGUF Q4",
+      "requires": {
+        "commands": ["llama-server"],
+        "paths": ["/home/hhai/models/qwen2.5-72b-instruct-q4.gguf"]
+      }
+    },
+    {
+      "name": "qwen72b-gptq",
+      "runtime": "vLLM",
+      "quant": "GPTQ",
+      "requires": {
+        "commands": ["/home/hhai/vllm-l20-exp/bin/vllm"],
+        "paths": ["/home/hhai/models/Qwen2.5-72B-Instruct-GPTQ"]
+      }
+    },
+    {
+      "name": "qwen72b-fp8",
+      "runtime": "vLLM-or-NIM",
+      "quant": "FP8",
+      "requires": {
+        "commands": ["/home/hhai/vllm-l20-exp/bin/vllm"],
+        "paths": ["/home/hhai/models/Qwen2.5-72B-Instruct-FP8"]
+      }
+    }
+  ]
+}

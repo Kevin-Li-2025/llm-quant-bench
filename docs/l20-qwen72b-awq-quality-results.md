@@ -104,6 +104,19 @@ Results:
 
 LongBench scores use the repo's lightweight max token-F1 scorer. This is useful as a same-run regression and retention metric, but it should not be presented as an official LongBench leaderboard number without matching the official LongBench evaluator and prompt templates.
 
+The repo now includes a stricter postprocess step:
+
+```bash
+python3 scripts/score_longbench_official.py \
+  --samples /home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/quality-eval-20260520T084323Z/current-longbench-8k/eval/samples.jsonl \
+  --out /home/hhai/llm-quant-bench/runs/qwen72b-awq-l20/quality-eval-20260520T084323Z/current-longbench-8k/official-metrics
+```
+
+This applies the LongBench v1 task-specific metric mapping to the generated
+samples. It is stricter than the earlier single token-F1 metric, but leaderboard
+claims still require the exact official LongBench repository revision, prompt
+templates, and full task set.
+
 ## Retention Status
 
 BF16/FP16-vs-AWQ quality retention remains pending.

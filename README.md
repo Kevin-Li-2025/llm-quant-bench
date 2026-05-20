@@ -134,8 +134,11 @@ The repo now includes executable scaffolding for the missing research pieces:
 | BF16/FP16 baseline retention | `scripts/run_quality_retention.py` | matched baseline/candidate summaries plus `quality_retention.json` |
 | MT-Bench judge score | `scripts/score_mt_bench.py` | `judgments.jsonl`, judge `summary.json`, and `report.md` |
 | LongBench 8K quality | `scripts/run_longbench_8k.py` | LongBench subset `summary.json` and run manifest |
+| LongBench official-style metrics | `scripts/score_longbench_official.py` | task-specific LongBench v1 metric summary from existing samples |
 | vLLM vs SGLang vs llama.cpp | `scripts/run_ablation_matrix.py` with `examples/runtime_ablation.example.json` | per-runtime load summaries and `ablation_report.md` |
 | AWQ vs GPTQ vs FP8 | `scripts/run_ablation_matrix.py` with `examples/quant_ablation.example.json` | per-quant load/quality summaries and `ablation_report.md` |
+| Multi-run confidence intervals | `scripts/run_repeated_load.py`, `scripts/summarize_repeats_ci.py` | repeated run summaries with mean/stddev/95% CI |
+| Full matrix readiness | `scripts/check_experiment_readiness.py`, `examples/full_research_matrix.example.json` | explicit ready/blocked table before launching expensive jobs |
 
 Example baseline retention run, once a real BF16/FP16 endpoint exists:
 
@@ -174,6 +177,37 @@ python3 scripts/run_longbench_8k.py \
   --max-per-task 20 \
   --concurrency 1
 ```
+
+Example LongBench official-style metric postprocess:
+
+```bash
+python3 scripts/score_longbench_official.py \
+  --samples runs/qwen72b-awq-l20/quality-eval-20260520T084323Z/current-longbench-8k/eval/samples.jsonl \
+  --out runs/qwen72b-awq-l20/quality-eval-20260520T084323Z/current-longbench-8k/official-metrics
+```
+
+Example repeated load run with confidence intervals:
+
+```bash
+python3 scripts/run_repeated_load.py \
+  --config runs/qwen72b-awq-l20/config.fixed512x256.json \
+  --dataset runs/qwen72b-awq-l20/fixed-512in-256out.jsonl \
+  --out runs/qwen72b-awq-l20/repeated-fixed512x256-vllm-awq \
+  --concurrencies 1 4 8 16 \
+  --repeats 3 \
+  --requests 80 \
+  --stream-usage
+```
+
+Example readiness check for the full research matrix:
+
+```bash
+python3 scripts/check_experiment_readiness.py \
+  --manifest examples/full_research_matrix.example.json \
+  --out runs/research-matrix-readiness/readiness.json
+```
+
+See [docs/strict-experiment-suite.md](docs/strict-experiment-suite.md) for the stricter runbook and claim boundaries.
 
 Recommended external benchmarks to add:
 
